@@ -4,15 +4,15 @@ A serverless SAML Identity Provider (IdP) built with Terraform and AWS services,
 
 ## 🚀 Quick Start
 
-**Want to get started immediately?** See [QUICKSTART.md](QUICKSTART.md) for a 15-minute setup guide.
+**Want to get started immediately?** See [QUICKSTART.md](docs/QUICKSTART.md) for a 15-minute setup guide.
 
-For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Features
 
 - **Serverless Architecture**: Built entirely on AWS serverless services (Lambda, API Gateway, DynamoDB, S3)
 - **Multi-Account SSO**: Support for accessing multiple AWS accounts through a single login
-- **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](MFA_SETUP.md))
+- **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](docs/FA_SETUP.md))
 - **Role Selection**: Users can choose from multiple IAM roles before accessing the AWS Console
 - **Pay-per-use**: All resources use on-demand billing with no fixed costs
 - **Secure**: Uses AWS SSM Parameter Store for secrets, DynamoDB encryption at rest, and HTTPS everywhere
@@ -67,17 +67,17 @@ For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)**: Get up and running in 15 minutes
-- **[DEPLOYMENT.md](DEPLOYMENT.md)**: Detailed deployment guide with step-by-step instructions
-- **[AUTHENTICATION_FLOW.md](AUTHENTICATION_FLOW.md)**: Understand how the SAML authentication works
-- **[MFA_SETUP.md](MFA_SETUP.md)**: Complete guide for Multi-Factor Authentication setup and usage
-- **[IAM_POLICY.md](IAM_POLICY.md)**: Required IAM permissions for deployment and operations
-- **[USER_ROLE_MANAGEMENT.md](USER_ROLE_MANAGEMENT.md)**: Complete guide for managing users and roles via Lambda
-- **[QUICKSTART_USER_MANAGEMENT.md](QUICKSTART_USER_MANAGEMENT.md)**: Quick reference for user/role operations
+- **[QUICKSTART.md](docs/QUICKSTART.md)**: Get up and running in 15 minutes
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Detailed deployment guide with step-by-step instructions
+- **[AUTHENTICATION_FLOW.md](docs/AUTHENTICATION_FLOW.md)**: Understand how the SAML authentication works
+- **[MFA_SETUP.md](docs/MFA_SETUP.md)**: Complete guide for Multi-Factor Authentication setup and usage
+- **[IAM_POLICY.md](docs/IAM_POLICY.md)**: Required IAM permissions for deployment and operations
+- **[USER_ROLE_MANAGEMENT.md](docs/USER_ROLE_MANAGEMENT.md)**: Complete guide for managing users and roles via Lambda
+- **[QUICKSTART_USER_MANAGEMENT.md](docs/QUICKSTART_USER_MANAGEMENT.md)**: Quick reference for user/role operations
 
 ## Quick Start (Summary)
 
-For detailed instructions, see [QUICKSTART.md](QUICKSTART.md).
+For detailed instructions, see [QUICKSTART.md](docs/QUICKSTART.md).
 
 ### 1. Clone the Repository
 
