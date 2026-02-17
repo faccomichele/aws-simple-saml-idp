@@ -20,3 +20,23 @@ jobs:
       working-directory: '.'
       action: 'destroy'
     secrets: inherit
+
+  stg:
+    name: "[STG]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    with:
+      environment: 'stg'
+      region: 'eu-central-1'
+      working-directory: '.'
+      action: 'destroy'
+    secrets: inherit
+
+  prod:
+    name: "[PROD]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    with:
+      environment: 'prod'
+      region: 'eu-central-1'
+      working-directory: '.'
+      action: 'destroy'
+    secrets: inherit

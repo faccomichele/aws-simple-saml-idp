@@ -34,3 +34,29 @@ jobs:
       action: 'plan'
       download-lambda-artifacts: true
     secrets: inherit
+
+  stg:
+    needs: [build, dev]
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: "[STG]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    with:
+      environment: 'stg'
+      region: 'eu-central-1'
+      working-directory: '.'
+      action: 'plan'
+      download-lambda-artifacts: true
+    secrets: inherit
+
+  prod:
+    needs: [build, dev, stg]
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    name: "[PROD]"
+    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    with:
+      environment: 'prod'
+      region: 'eu-central-1'
+      working-directory: '.'
+      action: 'plan'
+      download-lambda-artifacts: true
+    secrets: inherit

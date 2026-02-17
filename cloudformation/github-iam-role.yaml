@@ -297,6 +297,12 @@ Resources:
                   - logs:DescribeResourcePolicies
                 Resource: '*'
 
+              - Sid: IAMSAMLProviderManagement
+                Effect: Allow
+                Action:
+                  - iam:CreateSAMLProvider
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/*'
+
               - Sid: IAMServiceLinkedRole
                 Effect: Allow
                 Action:
