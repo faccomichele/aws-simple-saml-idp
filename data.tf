@@ -3,6 +3,6 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
-data "http" "metadata" {
-  url = "${aws_apigatewayv2_stage.saml.invoke_url}/metadata"
-}
+# data "http" "metadata" {
+#   url = "${aws_apigatewayv2_stage.saml.invoke_url}/metadata"
+# }
