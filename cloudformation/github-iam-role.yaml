@@ -301,6 +301,10 @@ Resources:
                 Effect: Allow
                 Action:
                   - iam:CreateSAMLProvider
+                  - iam:TagSAMLProvider
+                  - iam:GetSAMLProvider
+                  - iam:ListSAMLProviders
+                  - iam:DeleteSAMLProvider
                 Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/*'
 
               - Sid: IAMServiceLinkedRole
