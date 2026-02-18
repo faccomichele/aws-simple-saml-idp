@@ -1,12 +1,10 @@
 # CloudFront Origin Access Identity
 resource "aws_cloudfront_origin_access_identity" "login_page" {
-  count   = var.enable_cloudfront ? 1 : 0
   comment = "OAI for ${local.project_name} login page"
 }
 
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "login_page" {
-  count               = var.enable_cloudfront ? 1 : 0
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
@@ -17,7 +15,7 @@ resource "aws_cloudfront_distribution" "login_page" {
     origin_id   = "S3-${aws_s3_bucket.login_page.id}"
 
     s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.login_page[0].cloudfront_access_identity_path
+      origin_access_identity = aws_cloudfront_origin_access_identity.login_page.cloudfront_access_identity_path
     }
   }
 

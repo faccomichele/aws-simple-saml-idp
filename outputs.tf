@@ -5,12 +5,12 @@ output "api_gateway_url" {
 
 output "login_page_url" {
   description = "URL to access the login page (CloudFront recommended for HTTPS access)"
-  value       = var.enable_cloudfront ? "https://${aws_cloudfront_distribution.login_page[0].domain_name}" : "Note: Direct S3 access without CloudFront requires additional configuration for HTTPS. Enable CloudFront or configure S3 website hosting."
+  value       = "https://${aws_cloudfront_distribution.login_page.domain_name}"
 }
 
 output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID (if enabled)"
-  value       = var.enable_cloudfront ? aws_cloudfront_distribution.login_page[0].id : null
+  value       = aws_cloudfront_distribution.login_page.id
 }
 
 output "website_bucket_name" {

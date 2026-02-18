@@ -38,7 +38,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "login_page" {
 resource "aws_s3_bucket_policy" "login_page" {
   bucket = aws_s3_bucket.login_page.id
 
-  policy = var.enable_cloudfront ? jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -51,8 +51,5 @@ resource "aws_s3_bucket_policy" "login_page" {
         Resource = "${aws_s3_bucket.login_page.arn}/*"
       }
     ]
-    }) : jsonencode({
-    Version   = "2012-10-17"
-    Statement = []
   })
 }

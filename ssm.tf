@@ -30,3 +30,15 @@ resource "aws_ssm_parameter" "saml_certificate" {
     Name = "${local.project_name}-saml-certificate-${local.environment}"
   }
 }
+
+resource "aws_ssm_parameter" "idp_base_url" {
+  name        = "/${local.project_name}/${local.environment}/idp/base/url"
+  description = "Base URL for the IdP (used for ACS URL and SSO endpoints) - Only used when a custom domain is not configured"
+  type        = "String"
+  value       = aws_apigatewayv2_stage.saml.invoke_url
+  count       = var.idp_base_url != "placeholder" ? 0 : 1
+
+  tags = {
+    Name = "${local.project_name}-idp-base-url-${local.environment}"
+  }
+}

@@ -27,16 +27,10 @@ variable "allowed_aws_accounts" {
   default     = []
 }
 
-variable "enable_cloudfront" {
-  description = "Enable CloudFront distribution for login page"
-  type        = bool
-  default     = true
-}
-
 variable "saml_provider_name" {
   description = "Name of the SAML provider in target AWS accounts"
   type        = string
-  default     = "SimpleSAMLIdP"
+  default     = "CentralSAMLIdP"
 }
 
 variable "allowed_cors_origins" {

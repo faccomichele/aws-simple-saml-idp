@@ -54,6 +54,21 @@ def get_ssm_parameter(name, with_decryption=True):
         return None
 
 
+# If `IDP_BASE_URL` was configured as the literal 'placeholder', attempt
+# to load the real base URL from SSM at `{SSM_PARAMETER_PREFIX}/idp/base/url`.
+# This keeps the environment configuration simple while allowing secure
+# overrides through SSM Parameter Store.
+try:
+    if IDP_BASE_URL == 'placeholder':
+        ssm_val = get_ssm_parameter('idp/base/url', with_decryption=False)
+        if ssm_val:
+            IDP_BASE_URL = ssm_val
+        else:
+            print(f"Warning: SSM parameter {SSM_PARAMETER_PREFIX}/idp/base/url not found; IDP_BASE_URL remains 'placeholder'")
+except Exception as e:
+    print(f"Error loading IDP_BASE_URL from SSM: {e}")
+
+
 def generate_saml_metadata():
     """Generate SAML metadata XML"""
     certificate = get_ssm_parameter('saml/certificate', with_decryption=False)

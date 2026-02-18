@@ -1,9 +1,6 @@
 # Example terraform.tfvars file
 # Copy this to terraform.tfvars and update with your values
-
-aws_region  = "us-east-1"
-environment = "dev"
-project_name = "simple-saml-idp"
+# Use this to updated the relevant <ENV>_TF_VARS variable in GitHub Actions
 
 # SAML Identity Provider configuration
 idp_entity_id = "https://saml-idp.example.com"
@@ -19,9 +16,6 @@ allowed_aws_accounts = [
   # "123456789012",
   # "098765432109"
 ]
-
-# Enable CloudFront for serving login page
-enable_cloudfront = true
 
 # SAML provider name in target AWS accounts (must match the provider name)
 saml_provider_name = "SimpleSAMLIdP"
