@@ -33,7 +33,7 @@ jobs:
       working-directory: '.'
       action: 'plan'
       download-lambda-artifacts: true
-      upload-output-artifact: true
+      upload-output-artifact: false
     secrets: inherit
 
   stg:
@@ -47,7 +47,7 @@ jobs:
       working-directory: '.'
       action: 'plan'
       download-lambda-artifacts: true
-      upload-output-artifact: true
+      upload-output-artifact: false
     secrets: inherit
 
   prod:
