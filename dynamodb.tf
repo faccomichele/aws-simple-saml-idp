@@ -16,7 +16,10 @@ resource "aws_dynamodb_table" "users" {
 
   global_secondary_index {
     name            = "EmailIndex"
-    hash_key        = "email"
+    key_schema {
+      attribute_name = "email"
+      key_type       = "HASH"
+    }
     projection_type = "ALL"
   }
 

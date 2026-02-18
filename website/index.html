@@ -328,10 +328,6 @@
                 Choose the AWS account and role you want to access:
             </p>
             <div id="roleList" class="role-list"></div>
-            <button type="button" class="btn" id="continueBtn" disabled>Continue to AWS Console</button>
-            <div class="loading" id="ssoLoading">
-                <span class="spinner"></span>Redirecting to AWS Console...
-            </div>
             <div class="back-link">
                 <a href="#" id="backLink">← Back to login</a>
             </div>
@@ -419,10 +415,8 @@
         const mfaVerify = document.getElementById('mfaVerify');
         const errorDiv = document.getElementById('error');
         const roleList = document.getElementById('roleList');
-        const continueBtn = document.getElementById('continueBtn');
         const backLink = document.getElementById('backLink');
         const loginLoading = document.getElementById('loginLoading');
-        const ssoLoading = document.getElementById('ssoLoading');
 
         // Show error message
         function showError(message) {
@@ -643,7 +637,30 @@
                     });
                     roleItem.classList.add('selected');
                     selectedRole = role;
-                    continueBtn.disabled = false;
+                    // Automatically continue to SSO when a role is selected
+                    // Create and submit the SSO form immediately (no extra confirmation)
+                    try {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `${API_BASE_URL}/sso`;
+
+                        const usernameInput = document.createElement('input');
+                        usernameInput.type = 'hidden';
+                        usernameInput.name = 'username';
+                        usernameInput.value = currentUsername;
+                        form.appendChild(usernameInput);
+
+                        const roleInput = document.createElement('input');
+                        roleInput.type = 'hidden';
+                        roleInput.name = 'role_arn';
+                        roleInput.value = selectedRole.role_arn;
+                        form.appendChild(roleInput);
+
+                        document.body.appendChild(form);
+                        form.submit();
+                    } catch (err) {
+                        console.error('Auto SSO submit error:', err);
+                    }
                 });
                 
                 roleList.appendChild(roleItem);
@@ -653,40 +670,7 @@
             roleSelection.classList.add('show');
         }
 
-        // Handle continue to AWS Console
-        continueBtn.addEventListener('click', async () => {
-            if (!selectedRole) return;
-
-            continueBtn.disabled = true;
-            ssoLoading.classList.add('show');
-
-            try {
-                // Create a form and submit to SSO endpoint
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `${API_BASE_URL}/sso`;
-
-                const usernameInput = document.createElement('input');
-                usernameInput.type = 'hidden';
-                usernameInput.name = 'username';
-                usernameInput.value = currentUsername;
-                form.appendChild(usernameInput);
-
-                const roleInput = document.createElement('input');
-                roleInput.type = 'hidden';
-                roleInput.name = 'role_arn';
-                roleInput.value = selectedRole.role_arn;
-                form.appendChild(roleInput);
-
-                document.body.appendChild(form);
-                form.submit();
-            } catch (error) {
-                console.error('SSO error:', error);
-                showError('Failed to redirect to AWS Console');
-                continueBtn.disabled = false;
-                ssoLoading.classList.remove('show');
-            }
-        });
+        // Continue button removed; role selection auto-submits to SSO on click
 
         // Handle back to login
         backLink.addEventListener('click', (e) => {
@@ -711,7 +695,6 @@
             currentPassword = '';  // Clear password from memory
             tempMfaSecret = '';     // Clear temp secret
             selectedRole = null;
-            continueBtn.disabled = true;
         }
 
         // Limit MFA token input to 6 digits
@@ -721,6 +704,15 @@
             if (this.value.length > 6) {
                 this.value = this.value.slice(0, 6);
             }
+            // Auto-submit when 6 digits entered
+            if (this.value.length === 6) {
+                const form = document.getElementById('mfaSetupForm');
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.dispatchEvent(new Event('submit', {cancelable: true}));
+                }
+            }
         });
 
         document.getElementById('verifyToken').addEventListener('input', function(e) {
@@ -728,6 +720,15 @@
             this.value = this.value.replace(/[^0-9]/g, '');
             if (this.value.length > 6) {
                 this.value = this.value.slice(0, 6);
+            }
+            // Auto-submit when 6 digits entered
+            if (this.value.length === 6) {
+                const form = document.getElementById('mfaVerifyForm');
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.dispatchEvent(new Event('submit', {cancelable: true}));
+                }
             }
         });
     </script>
