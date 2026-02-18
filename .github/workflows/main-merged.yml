@@ -53,7 +53,7 @@ jobs:
 
   stg-approval:
     needs: [dev-website]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
     # Environment protection rules configured in GitHub settings control approval
@@ -80,7 +80,7 @@ jobs:
 
   stg:
     needs: [build, dev, dev-website, stg-approval]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
     with:
@@ -94,7 +94,7 @@ jobs:
 
   stg-website:
     needs: stg
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG-WEBSITE]"
     uses: faccomichele/utils-n-scripts/.github/workflows/deploy-website.yml@main
     with:
@@ -105,7 +105,7 @@ jobs:
 
   prod-approval:
     needs: [stg-website]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
     # Environment protection rules configured in GitHub settings control approval
@@ -132,7 +132,7 @@ jobs:
 
   prod:
     needs: [build, dev, dev-website, stg, stg-website, prod-approval]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
     with:
@@ -146,7 +146,7 @@ jobs:
 
   prod-website:
     needs: prod
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD-WEBSITE]"
     uses: faccomichele/utils-n-scripts/.github/workflows/deploy-website.yml@main
     with:
