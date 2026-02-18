@@ -56,8 +56,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
-    # Environment protection rules configured in GitHub settings control approval
-    # Configure at: Settings > Environments > stg > Required reviewers
     environment:
       name: stg
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -108,8 +106,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
-    # Environment protection rules configured in GitHub settings control approval
-    # Configure at: Settings > Environments > prod > Required reviewers
     environment:
       name: prod
       url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
