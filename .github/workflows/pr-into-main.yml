@@ -33,10 +33,11 @@ jobs:
       working-directory: '.'
       action: 'plan'
       download-lambda-artifacts: true
+      upload-output-artifact: true
     secrets: inherit
 
   stg:
-    needs: build
+    needs: [build, dev]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[STG]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
@@ -46,10 +47,11 @@ jobs:
       working-directory: '.'
       action: 'plan'
       download-lambda-artifacts: true
+      upload-output-artifact: true
     secrets: inherit
 
   prod:
-    needs: build
+    needs: [build, dev]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[PROD]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
@@ -59,4 +61,5 @@ jobs:
       working-directory: '.'
       action: 'plan'
       download-lambda-artifacts: true
+      upload-output-artifact: false
     secrets: inherit
