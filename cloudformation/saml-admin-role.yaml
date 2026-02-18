@@ -68,13 +68,6 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}'
-            Action: 'sts:AssumeRoleWithSAML'
-            Condition:
-              StringEquals:
-                'SAML:aud': 'https://signin.aws.amazon.com/saml'
-          - Effect: Allow
-            Principal:
               Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-dev'
             Action: 'sts:AssumeRoleWithSAML'
             Condition:
