@@ -5,7 +5,7 @@ output "api_gateway_url" {
 
 output "login_page_url" {
   description = "URL to access the login page (CloudFront recommended for HTTPS access)"
-  value       = "https://${aws_cloudfront_distribution.login_page.domain_name}"
+  value       = "https://${aws_cloudfront_distribution.login_page.domain_name}/index.html"
 }
 
 output "cloudfront_distribution_id" {
