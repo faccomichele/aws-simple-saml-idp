@@ -36,7 +36,7 @@ jobs:
     secrets: inherit
 
   stg:
-    needs: [build, dev]
+    needs: build
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[STG]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
@@ -49,7 +49,7 @@ jobs:
     secrets: inherit
 
   prod:
-    needs: [build, dev, stg]
+    needs: build
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[PROD]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main

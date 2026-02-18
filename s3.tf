@@ -45,7 +45,7 @@ resource "aws_s3_bucket_policy" "login_page" {
         Sid    = "AllowCloudFrontOAI"
         Effect = "Allow"
         Principal = {
-          AWS = aws_cloudfront_origin_access_identity.login_page[0].iam_arn
+          AWS = aws_cloudfront_origin_access_identity.login_page.iam_arn
         }
         Action   = "s3:GetObject"
         Resource = "${aws_s3_bucket.login_page.arn}/*"
