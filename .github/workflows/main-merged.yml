@@ -1,4 +1,8 @@
 # This triggers on all merged PRs into main
+#
+# IMPORTANT: This workflow uses GitHub Environment Protection Rules for manual approvals.
+# See docs/WORKFLOW_APPROVALS.md for configuration instructions.
+# Approvals are required before deploying to STG and PROD environments.
 
 name: Main - Deploy
 
@@ -52,10 +56,27 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: "[STG-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
-    environment: stg
+    # Environment protection rules configured in GitHub settings control approval
+    # Configure at: Settings > Environments > stg > Required reviewers
+    environment:
+      name: stg
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Awaiting approval for staging
-        run: echo "Staging deployment awaiting environment approval"
+      - name: Display approval information
+        run: |
+          echo "=========================================="
+          echo "🔐 STAGING DEPLOYMENT APPROVAL REQUIRED"
+          echo "=========================================="
+          echo ""
+          echo "This workflow is paused pending approval."
+          echo "Configured reviewers must approve in GitHub UI."
+          echo ""
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "To approve: Go to Actions tab and review this deployment"
+          echo "=========================================="
 
   stg:
     needs: [build, dev, dev-website, stg-approval]
@@ -87,10 +108,27 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: "[PROD-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
-    environment: prod
+    # Environment protection rules configured in GitHub settings control approval
+    # Configure at: Settings > Environments > prod > Required reviewers
+    environment:
+      name: prod
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Awaiting approval for production
-        run: echo "Production deployment awaiting environment approval"
+      - name: Display approval information
+        run: |
+          echo "=========================================="
+          echo "🔐 PRODUCTION DEPLOYMENT APPROVAL REQUIRED"
+          echo "=========================================="
+          echo ""
+          echo "This workflow is paused pending approval."
+          echo "Configured reviewers must approve in GitHub UI."
+          echo ""
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "To approve: Go to Actions tab and review this deployment"
+          echo "=========================================="
 
   prod:
     needs: [build, dev, dev-website, stg, stg-website, prod-approval]
