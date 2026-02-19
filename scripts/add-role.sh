@@ -3,6 +3,9 @@
 
 set -e
 
+# Default ACS URL for backward compatibility
+DEFAULT_ACS_URL="https://signin.aws.amazon.com/saml"
+
 if [ $# -lt 4 ]; then
     echo "Usage: $0 <table-name> <username> <role-arn> <account-name> [acs-url]"
     echo "Example: $0 simple-saml-idp-roles-dev john.doe arn:aws:iam::123456789012:role/AdminRole 'Production Account'"
@@ -14,7 +17,7 @@ TABLE_NAME=$1
 USERNAME=$2
 ROLE_ARN=$3
 ACCOUNT_NAME=$4
-ACS_URL=${5:-"https://signin.aws.amazon.com/saml"}  # Default to AWS Console if not provided
+ACS_URL=${5:-"$DEFAULT_ACS_URL"}  # Default to AWS Console if not provided
 
 # Extract account ID from ARN
 ACCOUNT_ID=$(echo "$ROLE_ARN" | cut -d: -f5)

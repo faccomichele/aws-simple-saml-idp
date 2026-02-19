@@ -31,6 +31,9 @@ SSM_PARAMETER_PREFIX = os.environ['SSM_PARAMETER_PREFIX']
 ALLOWED_AWS_ACCOUNTS = json.loads(os.environ.get('ALLOWED_AWS_ACCOUNTS', '[]'))
 SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
 
+# Default ACS URL for backward compatibility
+DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
+
 # Cache for SSM parameters
 _ssm_cache = {}
 
@@ -409,7 +412,7 @@ def get_user_roles(username):
                 'role_name': role_name,
                 'account_name': item.get('account_name', 'Unknown'),
                 'description': item.get('description', ''),
-                'acs_url': item.get('acs_url', 'https://signin.aws.amazon.com/saml')  # Default to AWS Console
+                'acs_url': item.get('acs_url', DEFAULT_ACS_URL)
             })
         
         return roles
@@ -553,6 +556,7 @@ def handle_sso(event):
         params = parse_qs(body)
         username = params.get('username', [''])[0]
         role_arn = params.get('role_arn', [''])[0]
+        acs_url = params.get('acs_url', [''])[0]
         
         if not username or not role_arn:
             return create_html_response(
@@ -560,32 +564,33 @@ def handle_sso(event):
                 400
             )
         
-        # Fetch role data to get the ACS URL
-        try:
-            table = dynamodb.Table(ROLES_TABLE)
-            response = table.get_item(
-                Key={
-                    'username': username,
-                    'role_arn': role_arn
-                }
-            )
-            
-            if 'Item' not in response:
-                return create_html_response(
-                    '<html><body><h1>Error</h1><p>Role not found for user</p></body></html>',
-                    404
+        # If acs_url is not provided, fetch from DynamoDB (for backward compatibility)
+        if not acs_url:
+            try:
+                table = dynamodb.Table(ROLES_TABLE)
+                response = table.get_item(
+                    Key={
+                        'username': username,
+                        'role_arn': role_arn
+                    }
                 )
-            
-            role_data = response['Item']
-            # Get ACS URL from role data, default to AWS Console if not specified
-            acs_url = role_data.get('acs_url', 'https://signin.aws.amazon.com/saml')
-            
-        except Exception as e:
-            print(f"Error fetching role data: {e}")
-            return create_html_response(
-                '<html><body><h1>Error</h1><p>Failed to retrieve role configuration</p></body></html>',
-                500
-            )
+                
+                if 'Item' not in response:
+                    return create_html_response(
+                        '<html><body><h1>Error</h1><p>Role not found for user</p></body></html>',
+                        404
+                    )
+                
+                role_data = response['Item']
+                # Get ACS URL from role data, default to AWS Console if not specified
+                acs_url = role_data.get('acs_url', DEFAULT_ACS_URL)
+                
+            except Exception as e:
+                print(f"Error fetching role data: {e}")
+                return create_html_response(
+                    '<html><body><h1>Error</h1><p>Failed to retrieve role configuration</p></body></html>',
+                    500
+                )
         
         # Generate SAML response with the role's ACS URL
         saml_response = generate_saml_response(username, role_arn, acs_url)
