@@ -12,6 +12,7 @@ For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 - **Serverless Architecture**: Built entirely on AWS serverless services (Lambda, API Gateway, DynamoDB, S3)
 - **Multi-Application Support**: Works with AWS Console, Grafana Cloud, and any SAML 2.0 compatible application
+- **Flexible SAML Attributes**: Configure custom SAML attributes per role with `attr_` prefix for easy management (see [CUSTOM_ATTRIBUTES.md](docs/CUSTOM_ATTRIBUTES.md))
 - **Multi-Account SSO**: Support for accessing multiple AWS accounts through a single login
 - **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](docs/FA_SETUP.md))
 - **Role Selection**: Users can choose from multiple IAM roles before accessing the AWS Console
@@ -259,9 +260,28 @@ Or omit the ACS URL parameter to use AWS Console as default:
 
 **Grafana Cloud**
 
+For Grafana Cloud, you can configure custom SAML attributes directly in DynamoDB. Use a descriptive role identifier instead of an AWS IAM ARN:
+
+```bash
+# Using AWS CLI to invoke the Lambda function with custom attributes
+aws lambda invoke \
+  --function-name simple-saml-idp-manage-users-roles-dev \
+  --payload file://examples/lambda-create-role-grafana.json \
+  response.json
+
+# Or manually add to DynamoDB with attributes like:
+# - attr_email: user email
+# - attr_display_name: user's display name
+# - attr_groups: Grafana role (Viewer, Editor, Admin)
+```
+
+See [CUSTOM_ATTRIBUTES.md](docs/CUSTOM_ATTRIBUTES.md) for detailed Grafana configuration examples.
+
+**Legacy Grafana Setup (without custom attributes)**
+
 ```bash
 ./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
-  "arn:aws:iam::123456789012:role/GrafanaViewerRole" \
+  "grafana:viewer" \
   "Grafana Monitoring" \
   "https://YOUR-STACK.grafana.net/saml/acs"
 ```
@@ -280,17 +300,14 @@ Or omit the ACS URL parameter to use AWS Console as default:
 You can configure a single user to access multiple applications by creating separate role mappings with different ACS URLs:
 
 ```bash
-# AWS Console access
+# AWS Console access with AWS-specific attributes
 ./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
   "arn:aws:iam::123456789012:role/AdminRole" \
   "AWS Production" \
   "https://signin.aws.amazon.com/saml"
 
-# Grafana Cloud access
-./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
-  "arn:aws:iam::123456789012:role/GrafanaRole" \
-  "Grafana Monitoring" \
-  "https://mystack.grafana.net/saml/acs"
+# Grafana Cloud access with custom attributes (use Lambda function)
+# See examples/lambda-create-role-grafana.json for the full configuration
 ```
 
 When the user logs in, they'll see all available roles and can choose which application to access.
