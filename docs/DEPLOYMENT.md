@@ -47,6 +47,12 @@ enable_cloudfront = true            # Set to false to skip CloudFront
 
 # Optional: Restrict to specific AWS accounts
 allowed_aws_accounts = []           # Empty = allow all
+
+# SAML ACS URL - defaults to AWS Console
+# For AWS Console (default): "https://signin.aws.amazon.com/saml"
+# For Grafana Cloud: "https://YOUR-STACK.grafana.net/saml/acs"
+# For other apps: Check their SAML documentation
+saml_acs_url = "https://signin.aws.amazon.com/saml"
 ```
 
 #### 1.3 Build Lambda Layer (Optional)
