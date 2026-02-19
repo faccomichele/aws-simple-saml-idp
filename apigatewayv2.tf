@@ -86,3 +86,49 @@ resource "aws_apigatewayv2_stage" "saml" {
     Name = "${local.project_name}-api-stage-${local.environment}"
   }
 }
+
+# Lambda Integration for OIDC
+resource "aws_apigatewayv2_integration" "lambda_oidc" {
+  api_id                 = aws_apigatewayv2_api.saml.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.oidc_processor.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+# OIDC Routes
+resource "aws_apigatewayv2_route" "oidc_discovery" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "GET /.well-known/openid-configuration"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_oidc.id}"
+}
+
+resource "aws_apigatewayv2_route" "oidc_jwks" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "GET /oauth2/jwks"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_oidc.id}"
+}
+
+resource "aws_apigatewayv2_route" "oidc_authorize_get" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "GET /oauth2/authorize"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_oidc.id}"
+}
+
+resource "aws_apigatewayv2_route" "oidc_authorize_post" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "POST /oauth2/authorize"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_oidc.id}"
+}
+
+resource "aws_apigatewayv2_route" "oidc_token" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "POST /oauth2/token"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_oidc.id}"
+}
+
+resource "aws_apigatewayv2_route" "oidc_userinfo" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "GET /oauth2/userinfo"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_oidc.id}"
+}

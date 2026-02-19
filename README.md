@@ -1,6 +1,6 @@
-# Simple SAML IdP for AWS and Third-Party Applications
+# Simple SAML/OIDC IdP for AWS and Third-Party Applications
 
-A serverless SAML Identity Provider (IdP) built with Terraform and AWS services. Originally designed for AWS Console Single Sign-On (SSO), it now supports integration with multiple SAML-enabled applications including Grafana Cloud, AWS Console, and any SAML 2.0 compatible service. Users can authenticate and access multiple applications through a simple web interface.
+A serverless Identity Provider (IdP) built with Terraform and AWS services. Supports both SAML 2.0 and OpenID Connect (OIDC) protocols. Originally designed for AWS Console Single Sign-On (SSO), it now supports integration with multiple SAML and OIDC-enabled applications including Grafana Cloud, AWS Console, Kubernetes, and any SAML 2.0 or OIDC-compatible service. Users can authenticate and access multiple applications through unified identity management.
 
 ## 🚀 Quick Start
 
@@ -8,13 +8,18 @@ A serverless SAML Identity Provider (IdP) built with Terraform and AWS services.
 
 For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+For OIDC setup, see [OIDC_SETUP.md](docs/OIDC_SETUP.md).
+
 ## Features
 
+- **Dual Protocol Support**: Both SAML 2.0 and OpenID Connect (OIDC) on the same infrastructure
 - **Serverless Architecture**: Built entirely on AWS serverless services (Lambda, API Gateway, DynamoDB, S3)
-- **Multi-Application Support**: Works with AWS Console, Grafana Cloud, and any SAML 2.0 compatible application
+- **Multi-Application Support**: Works with AWS Console, Grafana Cloud, Kubernetes, and any SAML 2.0 or OIDC compatible application
+- **Unified User Management**: Single user/role database shared between SAML and OIDC
 - **Flexible SAML Attributes**: Configure custom SAML attributes per role with `attr_` prefix for easy management (see [CUSTOM_ATTRIBUTES.md](docs/CUSTOM_ATTRIBUTES.md))
+- **OIDC Standard Compliance**: Full OpenID Connect 1.0 support with JWT tokens, discovery endpoint, and userinfo
 - **Multi-Account SSO**: Support for accessing multiple AWS accounts through a single login
-- **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](docs/FA_SETUP.md))
+- **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](docs/MFA_SETUP.md))
 - **Role Selection**: Users can choose from multiple IAM roles before accessing the AWS Console
 - **Configurable ACS URL**: Easy configuration for different SAML integrations
 - **Pay-per-use**: All resources use on-demand billing with no fixed costs
@@ -35,18 +40,19 @@ For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 └─────────────────┘      └──────────────────┘
        │
        ▼
-┌─────────────────┐      ┌──────────────────┐
-│  API Gateway    │─────▶│  Lambda Function │
-│  (HTTP API)     │      │  (SAML Processor)│
-└─────────────────┘      └────────┬─────────┘
-                                  │
-                    ┌─────────────┼─────────────┐
-                    ▼             ▼             ▼
-              ┌──────────┐  ┌──────────┐  ┌──────────┐
-              │DynamoDB  │  │DynamoDB  │  │   SSM    │
-              │ Users    │  │  Roles   │  │Parameter │
-              │  Table   │  │  Table   │  │  Store   │
-              └──────────┘  └──────────┘  └──────────┘
+┌─────────────────┐      ┌──────────────────────┐
+│  API Gateway    │─────▶│  Lambda Functions    │
+│  (HTTP API)     │      │  - SAML Processor    │
+│                 │      │  - OIDC Processor    │
+└─────────────────┘      └──────────┬───────────┘
+                                    │
+                      ┌─────────────┼─────────────┐
+                      ▼             ▼             ▼
+                ┌──────────┐  ┌──────────┐  ┌──────────┐
+                │DynamoDB  │  │DynamoDB  │  │   SSM    │
+                │ Users    │  │  Roles   │  │Parameter │
+                │  Table   │  │  Table   │  │  Store   │
+                └──────────┘  └──────────┘  └──────────┘
 ```
 
 ## AWS Resources Created
@@ -72,6 +78,7 @@ For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 - **[QUICKSTART.md](docs/QUICKSTART.md)**: Get up and running in 15 minutes
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Detailed deployment guide with step-by-step instructions
+- **[OIDC_SETUP.md](docs/OIDC_SETUP.md)**: Complete guide for OpenID Connect (OIDC) IdP setup and configuration
 - **[AUTHENTICATION_FLOW.md](docs/AUTHENTICATION_FLOW.md)**: Understand how the SAML authentication works
 - **[MFA_SETUP.md](docs/MFA_SETUP.md)**: Complete guide for Multi-Factor Authentication setup and usage
 - **[IAM_POLICY.md](docs/IAM_POLICY.md)**: Required IAM permissions for deployment and operations

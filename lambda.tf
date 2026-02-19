@@ -86,3 +86,51 @@ resource "aws_lambda_function" "manage_users_roles" {
     Name = "${local.project_name}-manage-users-roles-${local.environment}"
   }
 }
+
+# Lambda Layer for OIDC dependencies
+resource "aws_lambda_layer_version" "oidc_processor_dependencies" {
+  filename                 = "${path.module}/lambda/oidc_processor-layer.zip"
+  layer_name               = "${local.project_name}-oidc-dependencies-${local.environment}"
+  compatible_runtimes      = ["python3.13"]
+  source_code_hash         = filebase64sha256("${path.module}/lambda/oidc_processor-layer.zip")
+  compatible_architectures = ["x86_64", "arm64"]
+  description              = "OIDC and JWT dependencies"
+}
+
+# Lambda Function for OIDC Processing
+resource "aws_lambda_function" "oidc_processor" {
+  filename         = "${path.module}/lambda/oidc_processor.zip"
+  function_name    = "${local.project_name}-oidc-processor-${local.environment}"
+  role             = aws_iam_role.lambda_execution.arn
+  handler          = "index.lambda_handler"
+  source_code_hash = filebase64sha256("${path.module}/lambda/oidc_processor.zip")
+  runtime          = "python3.13"
+  timeout          = 30
+  memory_size      = 512
+  architectures    = ["x86_64"]
+
+  layers = [aws_lambda_layer_version.oidc_processor_dependencies.arn]
+
+  environment {
+    variables = {
+      USERS_TABLE          = aws_dynamodb_table.users.name
+      ROLES_TABLE          = aws_dynamodb_table.roles.name
+      IDP_ENTITY_ID        = local.idp_entity_id
+      IDP_BASE_URL         = var.idp_base_url
+      SSM_PARAMETER_PREFIX = "/${local.project_name}/${local.environment}"
+    }
+  }
+
+  tags = {
+    Name = "${local.project_name}-oidc-processor-${local.environment}"
+  }
+}
+
+# Lambda Permission for API Gateway - OIDC
+resource "aws_lambda_permission" "api_gateway_oidc" {
+  statement_id  = "AllowAPIGatewayInvokeOIDC"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.oidc_processor.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.saml.execution_arn}/*/*"
+}

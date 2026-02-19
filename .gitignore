@@ -47,6 +47,8 @@ lambda/saml_processor.zip
 lambda/saml_processor-layer.zip
 lambda/manage_users_roles.zip
 lambda/manage_users_roles-layer.zip
+lambda/oidc_processor.zip
+lambda/oidc_processor-layer.zip
 # Ignore all installed packages in lambda function directories
 lambda/saml_processor/*
 !lambda/saml_processor/index.py
@@ -54,6 +56,9 @@ lambda/saml_processor/*
 lambda/manage_users_roles/*
 !lambda/manage_users_roles/index.py
 !lambda/manage_users_roles/requirements.txt
+lambda/oidc_processor/*
+!lambda/oidc_processor/index.py
+!lambda/oidc_processor/requirements.txt
 
 # Python cache
 __pycache__/

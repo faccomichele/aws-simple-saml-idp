@@ -43,10 +43,16 @@ clean: ## Clean build artifacts
 	find . -type f -name "*.pyc" -delete
 
 build-layer: ## Build Lambda functions and layer with dependencies
-	./scripts/setup.sh
+	./scripts/build-lambda.sh
 
 generate-cert: ## Generate SAML certificates
 	./scripts/generate-saml-cert.sh
+
+generate-oidc-keys: ## Generate OIDC JWT signing keys
+	./scripts/generate-oidc-keys.sh
+
+upload-oidc-keys: ## Upload OIDC JWT keys to SSM
+	./scripts/upload-oidc-keys.sh
 
 upload-static: ## Upload login page to S3
 	@BUCKET_NAME=$$(terraform output -raw s3_bucket_name); \
