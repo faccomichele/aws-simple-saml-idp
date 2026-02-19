@@ -32,7 +32,6 @@ resource "aws_lambda_function" "saml_processor" {
       SSM_PARAMETER_PREFIX = "/${local.project_name}/${local.environment}"
       ALLOWED_AWS_ACCOUNTS = jsonencode(var.allowed_aws_accounts)
       SAML_PROVIDER_NAME   = "${var.saml_provider_name}-${local.environment}"
-      SAML_ACS_URL         = var.saml_acs_url
     }
   }
 

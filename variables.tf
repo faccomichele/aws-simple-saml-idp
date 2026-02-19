@@ -38,9 +38,3 @@ variable "allowed_cors_origins" {
   type        = list(string)
   default     = ["*"]
 }
-
-variable "saml_acs_url" {
-  description = "SAML Assertion Consumer Service (ACS) URL - the endpoint where SAML assertions are sent. Defaults to AWS Console SSO endpoint. For Grafana Cloud, use your Grafana SAML ACS URL."
-  type        = string
-  default     = "https://signin.aws.amazon.com/saml"
-}
