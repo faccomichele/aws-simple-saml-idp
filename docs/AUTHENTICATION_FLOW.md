@@ -4,7 +4,9 @@ This document describes the authentication and authorization flow for the Simple
 
 ## Overview
 
-The Simple SAML IdP implements a standard SAML 2.0 authentication flow specifically designed for AWS Console SSO. The flow involves user authentication, role selection, SAML assertion generation, and automatic redirect to the AWS Console.
+The Simple SAML IdP implements a standard SAML 2.0 authentication flow designed for SAML-enabled applications including AWS Console SSO, Grafana Cloud, and other SAML 2.0 compatible services. The flow involves user authentication, role selection, SAML assertion generation, and automatic redirect to the configured application.
+
+**Note**: The target application (ACS URL) is configured per-role in DynamoDB, allowing each role to redirect to a different application (AWS Console, Grafana, etc.). Examples in this document use AWS Console, but the same flow applies to other applications.
 
 ## Flow Diagram
 

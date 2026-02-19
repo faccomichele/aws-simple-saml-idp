@@ -17,6 +17,9 @@ dynamodb = boto3.resource('dynamodb')
 USERS_TABLE = os.environ.get('USERS_TABLE', 'simple-saml-idp-users-dev')
 ROLES_TABLE = os.environ.get('ROLES_TABLE', 'simple-saml-idp-roles-dev')
 
+# Default ACS URL for backward compatibility
+DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
+
 # Bcrypt rounds with validation (safe range: 10-15)
 try:
     BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
@@ -271,6 +274,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
     
     Optional fields:
     - account_name: string (defaults to extracted account ID)
+    - acs_url: string (defaults to "https://signin.aws.amazon.com/saml")
     - description: string (defaults to "Role access for {username}")
     """
     try:
@@ -295,6 +299,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Set defaults
         account_name = data.get('account_name', account_id)
+        acs_url = data.get('acs_url', DEFAULT_ACS_URL)
         description = data.get('description', f"Role access for {username}")
         
         # Get DynamoDB table
@@ -314,6 +319,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
             'role_arn': role_arn,
             'account_name': account_name,
             'account_id': account_id,
+            'acs_url': acs_url,
             'description': description,
             'created_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
@@ -342,6 +348,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
     
     Optional fields (at least one should be provided):
     - account_name: string
+    - acs_url: string
     - description: string
     """
     try:
@@ -374,6 +381,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
         # Handle field updates
         field_mappings = {
             'account_name': 'account_name',
+            'acs_url': 'acs_url',
             'description': 'description'
         }
         

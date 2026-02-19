@@ -1,6 +1,6 @@
-# Simple SAML IdP for AWS Console SSO
+# Simple SAML IdP for AWS and Third-Party Applications
 
-A serverless SAML Identity Provider (IdP) built with Terraform and AWS services, designed specifically for AWS Console Single Sign-On (SSO). This solution enables users to authenticate and access multiple AWS accounts with different IAM roles through a simple web interface.
+A serverless SAML Identity Provider (IdP) built with Terraform and AWS services. Originally designed for AWS Console Single Sign-On (SSO), it now supports integration with multiple SAML-enabled applications including Grafana Cloud, AWS Console, and any SAML 2.0 compatible service. Users can authenticate and access multiple applications through a simple web interface.
 
 ## 🚀 Quick Start
 
@@ -11,9 +11,11 @@ For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 ## Features
 
 - **Serverless Architecture**: Built entirely on AWS serverless services (Lambda, API Gateway, DynamoDB, S3)
+- **Multi-Application Support**: Works with AWS Console, Grafana Cloud, and any SAML 2.0 compatible application
 - **Multi-Account SSO**: Support for accessing multiple AWS accounts through a single login
 - **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](docs/FA_SETUP.md))
 - **Role Selection**: Users can choose from multiple IAM roles before accessing the AWS Console
+- **Configurable ACS URL**: Easy configuration for different SAML integrations
 - **Pay-per-use**: All resources use on-demand billing with no fixed costs
 - **Secure**: Uses AWS SSM Parameter Store for secrets, DynamoDB encryption at rest, and HTTPS everywhere
 - **Easy Deployment**: Deploy entire infrastructure with a single Terraform command
@@ -229,6 +231,87 @@ In each AWS account you want to enable SSO for:
    ```
 
 3. **Attach policies** to the role based on desired permissions.
+
+### Configuring for Different Applications
+
+The IdP can be configured to work with various SAML 2.0 compatible applications. Each role mapping in DynamoDB can have its own `acs_url` (Assertion Consumer Service URL), allowing different roles to redirect to different applications.
+
+#### Adding Roles with ACS URL
+
+When adding a role mapping, specify the ACS URL for the target application:
+
+**AWS Console (Default)**
+
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AdminRole" \
+  "Production Account" \
+  "https://signin.aws.amazon.com/saml"
+```
+
+Or omit the ACS URL parameter to use AWS Console as default:
+
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AdminRole" \
+  "Production Account"
+```
+
+**Grafana Cloud**
+
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/GrafanaViewerRole" \
+  "Grafana Monitoring" \
+  "https://YOUR-STACK.grafana.net/saml/acs"
+```
+
+**Other SAML Applications**
+
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AppRole" \
+  "Custom Application" \
+  "https://your-app-domain.com/saml/acs"
+```
+
+#### Multi-Application Support
+
+You can configure a single user to access multiple applications by creating separate role mappings with different ACS URLs:
+
+```bash
+# AWS Console access
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AdminRole" \
+  "AWS Production" \
+  "https://signin.aws.amazon.com/saml"
+
+# Grafana Cloud access
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/GrafanaRole" \
+  "Grafana Monitoring" \
+  "https://mystack.grafana.net/saml/acs"
+```
+
+When the user logs in, they'll see all available roles and can choose which application to access.
+
+#### Manual Role Configuration
+
+You can also manually add roles to DynamoDB with the `acs_url` field:
+
+```json
+{
+  "username": "john.doe",
+  "role_arn": "arn:aws:iam::123456789012:role/AdminRole",
+  "account_name": "Production Account",
+  "account_id": "123456789012",
+  "acs_url": "https://signin.aws.amazon.com/saml",
+  "description": "Full administrator access",
+  "created_at": "2024-01-08T00:00:00Z"
+}
+```
+
+**Note**: If `acs_url` is not specified in a role, it defaults to AWS Console (`https://signin.aws.amazon.com/saml`) for backward compatibility.
 
 ## Usage
 

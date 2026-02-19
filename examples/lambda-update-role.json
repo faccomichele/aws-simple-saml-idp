@@ -4,6 +4,7 @@
     "username": "john.doe",
     "role_arn": "arn:aws:iam::123456789012:role/AdminRole",
     "account_name": "Production Environment",
+    "acs_url": "https://signin.aws.amazon.com/saml",
     "description": "Updated: Full administrative access with enhanced permissions"
   }
 }

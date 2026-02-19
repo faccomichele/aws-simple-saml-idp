@@ -657,6 +657,12 @@
                         roleInput.value = selectedRole.role_arn;
                         form.appendChild(roleInput);
 
+                        const acsUrlInput = document.createElement('input');
+                        acsUrlInput.type = 'hidden';
+                        acsUrlInput.name = 'acs_url';
+                        acsUrlInput.value = selectedRole.acs_url || 'https://signin.aws.amazon.com/saml';
+                        form.appendChild(acsUrlInput);
+
                         document.body.appendChild(form);
                         form.submit();
                     } catch (err) {

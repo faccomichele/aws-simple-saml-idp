@@ -31,6 +31,9 @@ SSM_PARAMETER_PREFIX = os.environ['SSM_PARAMETER_PREFIX']
 ALLOWED_AWS_ACCOUNTS = json.loads(os.environ.get('ALLOWED_AWS_ACCOUNTS', '[]'))
 SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
 
+# Default ACS URL for backward compatibility
+DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
+
 # Cache for SSM parameters
 _ssm_cache = {}
 
@@ -104,9 +107,9 @@ def generate_saml_metadata():
     return metadata
 
 
-def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION):
+def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION_DURATION):
     """
-    Generate SAML Response for AWS Console SSO
+    Generate SAML Response for SAML-enabled applications
     
     NOTE: This implementation generates unsigned SAML assertions for simplicity.
     AWS Console accepts unsigned SAML assertions from trusted IdPs configured
@@ -151,7 +154,7 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
                      ID="{response_id}"
                      Version="2.0"
                      IssueInstant="{issue_instant}"
-                     Destination="https://signin.aws.amazon.com/saml">
+                     Destination="{acs_url}">
   <saml:Issuer>{IDP_ENTITY_ID}</saml:Issuer>
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
@@ -165,7 +168,7 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
       <saml:NameID Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">{username}</saml:NameID>
       <saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
         <saml:SubjectConfirmationData NotOnOrAfter="{not_on_or_after_str}"
-                                     Recipient="https://signin.aws.amazon.com/saml"/>
+                                     Recipient="{acs_url}"/>
       </saml:SubjectConfirmation>
     </saml:Subject>
     <saml:Conditions NotBefore="{not_before_str}"
@@ -408,7 +411,8 @@ def get_user_roles(username):
                 'account_id': account_id,
                 'role_name': role_name,
                 'account_name': item.get('account_name', 'Unknown'),
-                'description': item.get('description', '')
+                'description': item.get('description', ''),
+                'acs_url': item.get('acs_url', DEFAULT_ACS_URL)
             })
         
         return roles
@@ -552,6 +556,7 @@ def handle_sso(event):
         params = parse_qs(body)
         username = params.get('username', [''])[0]
         role_arn = params.get('role_arn', [''])[0]
+        acs_url = params.get('acs_url', [''])[0]
         
         if not username or not role_arn:
             return create_html_response(
@@ -559,25 +564,53 @@ def handle_sso(event):
                 400
             )
         
-        # Generate SAML response
-        saml_response = generate_saml_response(username, role_arn)
+        # If acs_url is not provided, fetch from DynamoDB (for backward compatibility)
+        if not acs_url:
+            try:
+                table = dynamodb.Table(ROLES_TABLE)
+                response = table.get_item(
+                    Key={
+                        'username': username,
+                        'role_arn': role_arn
+                    }
+                )
+                
+                if 'Item' not in response:
+                    return create_html_response(
+                        '<html><body><h1>Error</h1><p>Role not found for user</p></body></html>',
+                        404
+                    )
+                
+                role_data = response['Item']
+                # Get ACS URL from role data, default to AWS Console if not specified
+                acs_url = role_data.get('acs_url', DEFAULT_ACS_URL)
+                
+            except Exception as e:
+                print(f"Error fetching role data: {e}")
+                return create_html_response(
+                    '<html><body><h1>Error</h1><p>Failed to retrieve role configuration</p></body></html>',
+                    500
+                )
+        
+        # Generate SAML response with the role's ACS URL
+        saml_response = generate_saml_response(username, role_arn, acs_url)
         saml_encoded = base64.b64encode(saml_response.encode('utf-8')).decode('utf-8')
         
         # Create HTML auto-submit form
         html = f'''<!DOCTYPE html>
 <html>
 <head>
-    <title>AWS Console SSO</title>
+    <title>SAML SSO</title>
 </head>
 <body onload="document.forms[0].submit()">
-    <form method="POST" action="https://signin.aws.amazon.com/saml">
+    <form method="POST" action="{acs_url}">
         <input type="hidden" name="SAMLResponse" value="{saml_encoded}"/>
         <noscript>
             <p>JavaScript is disabled. Click the button below to continue.</p>
-            <input type="submit" value="Continue to AWS Console"/>
+            <input type="submit" value="Continue"/>
         </noscript>
     </form>
-    <p>Redirecting to AWS Console...</p>
+    <p>Redirecting to application...</p>
 </body>
 </html>'''
         

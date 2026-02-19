@@ -49,6 +49,8 @@ enable_cloudfront = true            # Set to false to skip CloudFront
 allowed_aws_accounts = []           # Empty = allow all
 ```
 
+**Note**: The SAML ACS URL is now configured per-role in DynamoDB (see Phase 4 below), not in terraform.tfvars.
+
 #### 1.3 Build Lambda Layer (Optional)
 
 If you modified `lambda/layer/requirements.txt`:
@@ -290,12 +292,26 @@ aws lambda invoke \
 
 ```bash
 ROLES_TABLE=$(terraform output -raw dynamodb_roles_table)
+
+# AWS Console role (default ACS URL)
 ./scripts/add-role.sh "$ROLES_TABLE" john.doe \
   "arn:aws:iam::123456789012:role/SAMLAdminRole" \
   "Production Account"
+
+# Or explicitly specify AWS Console ACS URL
+./scripts/add-role.sh "$ROLES_TABLE" john.doe \
+  "arn:aws:iam::123456789012:role/SAMLAdminRole" \
+  "Production Account" \
+  "https://signin.aws.amazon.com/saml"
+
+# Grafana Cloud role
+./scripts/add-role.sh "$ROLES_TABLE" john.doe \
+  "arn:aws:iam::123456789012:role/GrafanaRole" \
+  "Grafana Monitoring" \
+  "https://YOUR-STACK.grafana.net/saml/acs"
 ```
 
-Repeat for each account/role combination.
+Repeat for each account/role/application combination. Each role can have its own ACS URL for different applications.
 
 ### Phase 6: Testing (5 minutes)
 
@@ -338,9 +354,17 @@ aws logs tail /aws/apigateway/simple-saml-idp-dev --follow
 
 ```bash
 ./scripts/add-user.sh "$USERS_TABLE" jane.smith "AnotherPassword456"
+
+# Add AWS Console role
 ./scripts/add-role.sh "$ROLES_TABLE" jane.smith \
   "arn:aws:iam::987654321098:role/SAMLReadOnlyRole" \
   "Development Account"
+
+# Add Grafana Cloud role
+./scripts/add-role.sh "$ROLES_TABLE" jane.smith \
+  "arn:aws:iam::987654321098:role/GrafanaRole" \
+  "Grafana Dev" \
+  "https://dev-stack.grafana.net/saml/acs"
 ```
 
 ### Update Login Page
