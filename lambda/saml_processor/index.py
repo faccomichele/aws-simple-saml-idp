@@ -34,6 +34,20 @@ SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
 # Default ACS URL for backward compatibility
 DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
 
+# Attribute mapping table: short names (stored in DynamoDB) -> full SAML attribute names
+ATTRIBUTE_MAPPING = {
+    'attr_aws_role': 'https://aws.amazon.com/SAML/Attributes/Role',
+    'attr_aws_role_session_name': 'https://aws.amazon.com/SAML/Attributes/RoleSessionName',
+    'attr_aws_session_duration': 'https://aws.amazon.com/SAML/Attributes/SessionDuration',
+    'attr_email': 'email',
+    'attr_name': 'name',
+    'attr_given_name': 'givenName',
+    'attr_surname': 'surname',
+    'attr_display_name': 'displayName',
+    'attr_uid': 'uid',
+    'attr_groups': 'groups',
+}
+
 # Cache for SSM parameters
 _ssm_cache = {}
 
@@ -107,48 +121,123 @@ def generate_saml_metadata():
     return metadata
 
 
-def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION_DURATION):
+def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION_DURATION, custom_attributes=None):
     """
     Generate SAML Response for SAML-enabled applications
     
-    NOTE: This implementation generates unsigned SAML assertions for simplicity.
-    AWS Console accepts unsigned SAML assertions from trusted IdPs configured
-    with valid certificates. For enhanced security in production, consider
-    implementing proper XML signature using libraries like python-saml or signxml.
+    Supports dynamic attribute generation based on custom_attributes dict.
+    Attributes with 'attr_' prefix in custom_attributes are mapped to full SAML attribute names.
+    
+    Args:
+        username: User identifier
+        role_arn: AWS IAM role ARN (optional, only for AWS Console)
+        acs_url: Assertion Consumer Service URL
+        session_duration: Session duration in seconds
+        custom_attributes: Dict of custom attributes with 'attr_' prefix keys
     """
     now = datetime.utcnow()
     not_before = now - timedelta(minutes=5)
     not_on_or_after = now + timedelta(seconds=session_duration)
     
-    # Extract account ID and role name from ARN
-    # Format: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
-    arn_parts = role_arn.split(':')
+    # Initialize variables for AWS-specific attributes
+    principal_arn = None
+    account_id = None
     
-    # Validate ARN format
-    if len(arn_parts) < 6 or arn_parts[0] != 'arn' or arn_parts[2] != 'iam':
-        raise ValueError(f"Invalid IAM role ARN format: {role_arn}")
-    
-    account_id = arn_parts[4]
-    role_path = arn_parts[5] if len(arn_parts) > 5 else ''
-    
-    if not role_path.startswith('role/'):
-        raise ValueError(f"ARN does not specify a role: {role_arn}")
-    
-    role_name = role_path.split('/')[-1]
+    # Only process role_arn if provided and it's an AWS ARN
+    if role_arn and role_arn.startswith('arn:aws:iam::'):
+        # Extract account ID and role name from ARN
+        # Format: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME
+        arn_parts = role_arn.split(':')
+        
+        # Validate ARN format
+        if len(arn_parts) < 6 or arn_parts[0] != 'arn' or arn_parts[2] != 'iam':
+            raise ValueError(f"Invalid IAM role ARN format: {role_arn}")
+        
+        account_id = arn_parts[4]
+        role_path = arn_parts[5] if len(arn_parts) > 5 else ''
+        
+        if not role_path.startswith('role/'):
+            raise ValueError(f"ARN does not specify a role: {role_arn}")
+        
+        role_name = role_path.split('/')[-1]
+        
+        # Build principal ARN (for the SAML provider in the target account)
+        principal_arn = f"arn:aws:iam::{account_id}:saml-provider/{SAML_PROVIDER_NAME}"
     
     # Generate unique IDs
     response_id = f"_{''.join(f'{b:02x}' for b in os.urandom(20))}"
     assertion_id = f"_{''.join(f'{b:02x}' for b in os.urandom(20))}"
-    
-    # Build principal ARN (for the SAML provider in the target account)
-    principal_arn = f"arn:aws:iam::{account_id}:saml-provider/{SAML_PROVIDER_NAME}"
     
     # Format timestamps
     issue_instant = now.strftime('%Y-%m-%dT%H:%M:%SZ')
     not_before_str = not_before.strftime('%Y-%m-%dT%H:%M:%SZ')
     not_on_or_after_str = not_on_or_after.strftime('%Y-%m-%dT%H:%M:%SZ')
     
-    # SAML Response template
+    # Build AttributeStatement dynamically based on custom_attributes
+    attributes_xml = []
+    
+    # Process custom attributes with 'attr_' prefix
+    if custom_attributes:
+        for key, value in custom_attributes.items():
+            if key.startswith('attr_'):
+                # Check if we have a mapping for this attribute
+                if key in ATTRIBUTE_MAPPING:
+                    attr_name = ATTRIBUTE_MAPPING[key]
+                    
+                    # Handle special case for AWS Role attribute
+                    if key == 'attr_aws_role' and role_arn and principal_arn:
+                        # For AWS Role, combine role_arn and principal_arn
+                        attr_value = f"{role_arn},{principal_arn}"
+                    elif key == 'attr_aws_role_session_name':
+                        # Use username as RoleSessionName
+                        attr_value = username
+                    elif key == 'attr_aws_session_duration':
+                        # Use the provided value or default session duration
+                        attr_value = str(value) if value else str(session_duration)
+                    else:
+                        # Use the value as-is
+                        attr_value = str(value)
+                    
+                    # Build attribute XML
+                    attr_xml = f'''      <saml:Attribute Name="{attr_name}">
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:type="xs:string">{attr_value}</saml:AttributeValue>
+      </saml:Attribute>'''
+                    attributes_xml.append(attr_xml)
+                else:
+                    # For unknown attributes, use the key without 'attr_' prefix as the attribute name
+                    attr_name = key[5:]  # Remove 'attr_' prefix
+                    attr_value = str(value)
+                    attr_xml = f'''      <saml:Attribute Name="{attr_name}">
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:type="xs:string">{attr_value}</saml:AttributeValue>
+      </saml:Attribute>'''
+                    attributes_xml.append(attr_xml)
+    
+    # If no custom attributes provided but role_arn exists, add default AWS attributes for backward compatibility
+    if not attributes_xml and role_arn and principal_arn:
+        attributes_xml.append(f'''      <saml:Attribute Name="https://aws.amazon.com/SAML/Attributes/RoleSessionName">
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:type="xs:string">{username}</saml:AttributeValue>
+      </saml:Attribute>''')
+        attributes_xml.append(f'''      <saml:Attribute Name="https://aws.amazon.com/SAML/Attributes/Role">
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:type="xs:string">{role_arn},{principal_arn}</saml:AttributeValue>
+      </saml:Attribute>''')
+        attributes_xml.append(f'''      <saml:Attribute Name="https://aws.amazon.com/SAML/Attributes/SessionDuration">
+        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:type="xs:string">{session_duration}</saml:AttributeValue>
+      </saml:Attribute>''')
+    
+    # Join all attributes
+    attribute_statement = '\n'.join(attributes_xml) if attributes_xml else ''
+    
+    # SAML Response template with dynamic AttributeStatement
     saml_response = f'''<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
                      xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                      ID="{response_id}"
@@ -184,21 +273,7 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
       </saml:AuthnContext>
     </saml:AuthnStatement>
     <saml:AttributeStatement>
-      <saml:Attribute Name="https://aws.amazon.com/SAML/Attributes/RoleSessionName">
-        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                           xsi:type="xs:string">{username}</saml:AttributeValue>
-      </saml:Attribute>
-      <saml:Attribute Name="https://aws.amazon.com/SAML/Attributes/Role">
-        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                           xsi:type="xs:string">{role_arn},{principal_arn}</saml:AttributeValue>
-      </saml:Attribute>
-      <saml:Attribute Name="https://aws.amazon.com/SAML/Attributes/SessionDuration">
-        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                           xsi:type="xs:string">{session_duration}</saml:AttributeValue>
-      </saml:Attribute>
+{attribute_statement}
     </saml:AttributeStatement>
   </saml:Assertion>
 </samlp:Response>'''
@@ -591,9 +666,31 @@ def handle_sso(event):
                     '<html><body><h1>Error</h1><p>Failed to retrieve role configuration</p></body></html>',
                     500
                 )
+        else:
+            # If acs_url is provided, we still need to fetch role_data for custom attributes
+            try:
+                table = dynamodb.Table(ROLES_TABLE)
+                response = table.get_item(
+                    Key={
+                        'username': username,
+                        'role_arn': role_arn
+                    }
+                )
+                
+                if 'Item' in response:
+                    role_data = response['Item']
+                else:
+                    role_data = {}
+                    
+            except Exception as e:
+                print(f"Error fetching role data: {e}")
+                role_data = {}
         
-        # Generate SAML response with the role's ACS URL
-        saml_response = generate_saml_response(username, role_arn, acs_url)
+        # Extract custom attributes (those with 'attr_' prefix) from role_data
+        custom_attributes = {k: v for k, v in role_data.items() if k.startswith('attr_')}
+        
+        # Generate SAML response with the role's ACS URL and custom attributes
+        saml_response = generate_saml_response(username, role_arn, acs_url, custom_attributes=custom_attributes)
         saml_encoded = base64.b64encode(saml_response.encode('utf-8')).decode('utf-8')
         
         # Create HTML auto-submit form

@@ -5,5 +5,8 @@
   "account_id": "123456789012",
   "description": "Full administrator access to production resources",
   "acs_url": "https://signin.aws.amazon.com/saml",
+  "attr_aws_role": "true",
+  "attr_aws_role_session_name": "true",
+  "attr_aws_session_duration": "43200",
   "created_at": "2024-01-08T00:00:00Z"
 }
