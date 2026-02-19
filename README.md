@@ -79,6 +79,7 @@ For OIDC setup, see [OIDC_SETUP.md](docs/OIDC_SETUP.md).
 - **[QUICKSTART.md](docs/QUICKSTART.md)**: Get up and running in 15 minutes
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Detailed deployment guide with step-by-step instructions
 - **[OIDC_SETUP.md](docs/OIDC_SETUP.md)**: Complete guide for OpenID Connect (OIDC) IdP setup and configuration
+- **[OIDC_QUICKSTART.md](docs/OIDC_QUICKSTART.md)**: Quick reference for integrating applications with OIDC
 - **[AUTHENTICATION_FLOW.md](docs/AUTHENTICATION_FLOW.md)**: Understand how the SAML authentication works
 - **[MFA_SETUP.md](docs/MFA_SETUP.md)**: Complete guide for Multi-Factor Authentication setup and usage
 - **[IAM_POLICY.md](docs/IAM_POLICY.md)**: Required IAM permissions for deployment and operations
