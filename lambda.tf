@@ -31,7 +31,7 @@ resource "aws_lambda_function" "saml_processor" {
       SESSION_DURATION     = var.session_duration_seconds
       SSM_PARAMETER_PREFIX = "/${local.project_name}/${local.environment}"
       ALLOWED_AWS_ACCOUNTS = jsonencode(var.allowed_aws_accounts)
-      SAML_PROVIDER_NAME   = var.saml_provider_name
+      SAML_PROVIDER_NAME   = "${var.saml_provider_name}-${local.environment}"
     }
   }
 
