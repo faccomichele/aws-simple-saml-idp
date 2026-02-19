@@ -13,6 +13,27 @@ The SAML IdP now supports flexible, application-specific SAML attributes that ca
 
 ## Attribute Mapping Table
 
+The attribute mapping is centrally managed in the Terraform configuration (`definitions.tf`) as a local variable. This ensures both Lambda functions use the same mapping and prevents inconsistencies.
+
+To add or modify attribute mappings, update the `local.attribute_mapping` in `definitions.tf`:
+
+```hcl
+locals {
+  attribute_mapping = {
+    attr_aws_role                = "https://aws.amazon.com/SAML/Attributes/Role"
+    attr_aws_role_session_name   = "https://aws.amazon.com/SAML/Attributes/RoleSessionName"
+    attr_aws_session_duration    = "https://aws.amazon.com/SAML/Attributes/SessionDuration"
+    attr_email                   = "email"
+    attr_name                    = "name"
+    attr_given_name              = "givenName"
+    attr_surname                 = "surname"
+    attr_display_name            = "displayName"
+    attr_uid                     = "uid"
+    attr_groups                  = "groups"
+  }
+}
+```
+
 The following short attribute names (stored in DynamoDB) are automatically mapped to their full SAML attribute names:
 
 | Short Name (DynamoDB) | Full SAML Attribute Name |
