@@ -5,6 +5,9 @@
     "role_arn": "arn:aws:iam::123456789012:role/AdminRole",
     "account_name": "Production Account",
     "acs_url": "https://signin.aws.amazon.com/saml",
-    "description": "Full administrator access to production resources"
+    "description": "Full administrator access to production resources",
+    "attr_aws_role": "true",
+    "attr_aws_role_session_name": "true",
+    "attr_aws_session_duration": "43200"
   }
 }

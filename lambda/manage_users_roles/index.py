@@ -20,6 +20,17 @@ ROLES_TABLE = os.environ.get('ROLES_TABLE', 'simple-saml-idp-roles-dev')
 # Default ACS URL for backward compatibility
 DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
 
+# Attribute prefix for custom SAML attributes
+ATTR_PREFIX = 'attr_'
+
+# Attribute mapping table: short names (stored in DynamoDB) -> full SAML attribute names
+# This is now loaded from environment variable set by Terraform
+try:
+    ATTRIBUTE_MAPPING = json.loads(os.environ.get('ATTRIBUTE_MAPPING', '{}'))
+except (json.JSONDecodeError, ValueError):
+    print("Warning: Failed to load ATTRIBUTE_MAPPING from environment, using empty dict")
+    ATTRIBUTE_MAPPING = {}
+
 # Bcrypt rounds with validation (safe range: 10-15)
 try:
     BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
@@ -270,35 +281,43 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
     
     Required fields:
     - username: string
-    - role_arn: string (e.g., arn:aws:iam::123456789012:role/AdminRole)
     
     Optional fields:
-    - account_name: string (defaults to extracted account ID)
+    - role_arn: string (e.g., arn:aws:iam::123456789012:role/AdminRole, required for AWS Console)
+    - account_name: string (defaults to extracted account ID or empty)
     - acs_url: string (defaults to "https://signin.aws.amazon.com/saml")
     - description: string (defaults to "Role access for {username}")
+    - attr_*: any custom SAML attributes with 'attr_' prefix
     """
     try:
         # Validate required fields
         username = data.get('username')
-        role_arn = data.get('role_arn')
+        role_arn = data.get('role_arn', '')
         
         if not username:
             return error_response("Missing required field: username", 400)
+        
         if not role_arn:
-            return error_response("Missing required field: role_arn", 400)
+            return error_response("Missing required field: role_arn. For non-AWS applications, use a descriptive identifier (e.g., 'grafana:viewer')", 400)
         
-        # Validate role ARN format
-        if not role_arn.startswith('arn:aws:iam::'):
-            return error_response("Invalid role_arn format. Expected: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME", 400)
-        
-        # Extract account ID from ARN
-        try:
-            account_id = role_arn.split(':')[4]
-        except IndexError:
-            return error_response("Invalid role_arn format. Cannot extract account ID", 400)
+        # Validate role ARN format only if it's an AWS ARN
+        account_id = ''
+        if role_arn.startswith('arn:aws:iam::'):
+            # Extract account ID from AWS ARN
+            try:
+                account_id = role_arn.split(':')[4]
+            except IndexError:
+                return error_response("Invalid AWS role_arn format. Cannot extract account ID", 400)
         
         # Set defaults
-        account_name = data.get('account_name', account_id)
+        # For non-AWS applications, use the role_arn as a more descriptive account name
+        # (e.g., "grafana:viewer" becomes account_name if not specified)
+        if not account_id:
+            default_account_name = role_arn if role_arn else 'Application'
+        else:
+            default_account_name = account_id
+        
+        account_name = data.get('account_name', default_account_name)
         acs_url = data.get('acs_url', DEFAULT_ACS_URL)
         description = data.get('description', f"Role access for {username}")
         
@@ -313,7 +332,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
         except ClientError as e:
             print(f"Error checking existing role: {e}")
         
-        # Create role item
+        # Create role item with standard fields
         item = {
             'username': username,
             'role_arn': role_arn,
@@ -323,6 +342,11 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
             'description': description,
             'created_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
+        
+        # Add any custom attributes with 'attr_' prefix from the input data
+        for key, value in data.items():
+            if key.startswith(ATTR_PREFIX):
+                item[key] = value
         
         # Put item in DynamoDB
         table.put_item(Item=item)
@@ -378,7 +402,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
         expression_attribute_names = {}
         expression_attribute_values = {}
         
-        # Handle field updates
+        # Handle standard field updates
         field_mappings = {
             'account_name': 'account_name',
             'acs_url': 'acs_url',
@@ -392,6 +416,17 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
                 update_expressions.append(f"{placeholder} = {value_placeholder}")
                 expression_attribute_names[placeholder] = attr_name
                 expression_attribute_values[value_placeholder] = data[field]
+        
+        # Handle custom attributes with 'attr_' prefix
+        attr_counter = 0
+        for key, value in data.items():
+            if key.startswith(ATTR_PREFIX):
+                placeholder = f"#attr{attr_counter}"
+                value_placeholder = f":attr{attr_counter}"
+                update_expressions.append(f"{placeholder} = {value_placeholder}")
+                expression_attribute_names[placeholder] = key
+                expression_attribute_values[value_placeholder] = value
+                attr_counter += 1
         
         if not update_expressions:
             return error_response("No fields to update", 400)

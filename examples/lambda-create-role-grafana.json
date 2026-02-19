@@ -1,0 +1,14 @@
+{
+  "operation": "create_role",
+  "data": {
+    "username": "jane.smith",
+    "role_arn": "grafana:viewer",
+    "account_name": "Grafana Cloud",
+    "acs_url": "https://mystack.grafana.net/saml/acs",
+    "description": "Grafana Cloud monitoring access",
+    "attr_email": "jane.smith@example.com",
+    "attr_display_name": "Jane Smith",
+    "attr_name": "Jane Smith",
+    "attr_groups": "Editors"
+  }
+}
