@@ -1,6 +1,6 @@
-# Simple SAML IdP for AWS Console SSO
+# Simple SAML IdP for AWS and Third-Party Applications
 
-A serverless SAML Identity Provider (IdP) built with Terraform and AWS services, designed specifically for AWS Console Single Sign-On (SSO). This solution enables users to authenticate and access multiple AWS accounts with different IAM roles through a simple web interface.
+A serverless SAML Identity Provider (IdP) built with Terraform and AWS services. Originally designed for AWS Console Single Sign-On (SSO), it now supports integration with multiple SAML-enabled applications including Grafana Cloud, AWS Console, and any SAML 2.0 compatible service. Users can authenticate and access multiple applications through a simple web interface.
 
 ## 🚀 Quick Start
 
@@ -11,9 +11,11 @@ For detailed deployment instructions, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 ## Features
 
 - **Serverless Architecture**: Built entirely on AWS serverless services (Lambda, API Gateway, DynamoDB, S3)
+- **Multi-Application Support**: Works with AWS Console, Grafana Cloud, and any SAML 2.0 compatible application
 - **Multi-Account SSO**: Support for accessing multiple AWS accounts through a single login
 - **Multi-Factor Authentication (MFA)**: TOTP-based MFA compatible with Google Authenticator (see [MFA_SETUP.md](docs/FA_SETUP.md))
 - **Role Selection**: Users can choose from multiple IAM roles before accessing the AWS Console
+- **Configurable ACS URL**: Easy configuration for different SAML integrations
 - **Pay-per-use**: All resources use on-demand billing with no fixed costs
 - **Secure**: Uses AWS SSM Parameter Store for secrets, DynamoDB encryption at rest, and HTTPS everywhere
 - **Easy Deployment**: Deploy entire infrastructure with a single Terraform command
@@ -229,6 +231,55 @@ In each AWS account you want to enable SSO for:
    ```
 
 3. **Attach policies** to the role based on desired permissions.
+
+### Configuring for Different Applications
+
+The IdP can be configured to work with various SAML 2.0 compatible applications by setting the `saml_acs_url` variable in your `terraform.tfvars`.
+
+#### AWS Console (Default)
+
+```hcl
+saml_acs_url = "https://signin.aws.amazon.com/saml"
+```
+
+This is the default configuration and requires no changes to work with AWS Console SSO.
+
+#### Grafana Cloud
+
+To integrate with Grafana Cloud:
+
+1. In your Grafana Cloud settings, navigate to SAML authentication configuration
+2. Note your Grafana ACS URL (typically: `https://YOUR-STACK.grafana.net/saml/acs`)
+3. Update your `terraform.tfvars`:
+
+```hcl
+saml_acs_url = "https://YOUR-STACK.grafana.net/saml/acs"
+```
+
+4. Upload your IdP metadata to Grafana Cloud:
+   - Get metadata from: `https://your-api-gateway-url/metadata`
+   - Upload to Grafana Cloud SAML configuration
+
+5. Configure attribute mappings in Grafana Cloud:
+   - Name ID: User email or username
+   - Role: Configure based on your Grafana roles
+
+#### Other SAML Applications
+
+For other SAML 2.0 compatible applications:
+
+1. Find the application's SAML ACS URL (also called SSO URL or Assertion Consumer Service URL) in its SAML configuration documentation
+2. Update your `terraform.tfvars` with the ACS URL:
+
+```hcl
+saml_acs_url = "https://your-app-domain.com/saml/acs"
+```
+
+3. Download or access your IdP metadata from: `https://your-api-gateway-url/metadata`
+4. Configure the application's SAML integration with your IdP metadata
+5. Map SAML attributes according to the application's requirements
+
+**Note**: After changing the `saml_acs_url`, run `terraform apply` to update the Lambda function configuration.
 
 ## Usage
 
