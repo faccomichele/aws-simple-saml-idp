@@ -24,3 +24,10 @@ saml_provider_name = "SimpleSAMLIdP"
 # For production, restrict to your login page domain
 # Example: ["https://login.example.com", "https://idp.example.com"]
 allowed_cors_origins = ["*"]  # Warning: Allowing all origins is not recommended for production
+
+# SAML Assertion Consumer Service (ACS) URL
+# This is the endpoint where SAML assertions are sent after authentication
+# Default: "https://signin.aws.amazon.com/saml" (AWS Console SSO)
+# For Grafana Cloud, use: "https://YOUR-STACK.grafana.net/saml/acs"
+# For other applications, check their SAML integration documentation
+saml_acs_url = "https://signin.aws.amazon.com/saml"

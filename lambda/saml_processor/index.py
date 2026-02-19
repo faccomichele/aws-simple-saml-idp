@@ -30,6 +30,7 @@ SESSION_DURATION = int(os.environ['SESSION_DURATION'])
 SSM_PARAMETER_PREFIX = os.environ['SSM_PARAMETER_PREFIX']
 ALLOWED_AWS_ACCOUNTS = json.loads(os.environ.get('ALLOWED_AWS_ACCOUNTS', '[]'))
 SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
+SAML_ACS_URL = os.environ.get('SAML_ACS_URL', 'https://signin.aws.amazon.com/saml')
 
 # Cache for SSM parameters
 _ssm_cache = {}
@@ -151,7 +152,7 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
                      ID="{response_id}"
                      Version="2.0"
                      IssueInstant="{issue_instant}"
-                     Destination="https://signin.aws.amazon.com/saml">
+                     Destination="{SAML_ACS_URL}">
   <saml:Issuer>{IDP_ENTITY_ID}</saml:Issuer>
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
@@ -165,7 +166,7 @@ def generate_saml_response(username, role_arn, session_duration=SESSION_DURATION
       <saml:NameID Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">{username}</saml:NameID>
       <saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
         <saml:SubjectConfirmationData NotOnOrAfter="{not_on_or_after_str}"
-                                     Recipient="https://signin.aws.amazon.com/saml"/>
+                                     Recipient="{SAML_ACS_URL}"/>
       </saml:SubjectConfirmation>
     </saml:Subject>
     <saml:Conditions NotBefore="{not_before_str}"
@@ -570,7 +571,7 @@ def handle_sso(event):
     <title>AWS Console SSO</title>
 </head>
 <body onload="document.forms[0].submit()">
-    <form method="POST" action="https://signin.aws.amazon.com/saml">
+    <form method="POST" action="{SAML_ACS_URL}">
         <input type="hidden" name="SAMLResponse" value="{saml_encoded}"/>
         <noscript>
             <p>JavaScript is disabled. Click the button below to continue.</p>
