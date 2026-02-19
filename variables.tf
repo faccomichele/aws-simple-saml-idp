@@ -38,3 +38,9 @@ variable "allowed_cors_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+variable "allowed_oidc_redirect_uris" {
+  description = "List of allowed OIDC redirect URIs for security. If empty, only localhost and https URLs are allowed (development mode)"
+  type        = list(string)
+  default     = []
+}

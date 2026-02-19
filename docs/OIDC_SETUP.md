@@ -264,19 +264,21 @@ The userinfo endpoint returns:
 - **Authorization Code**: 5-minute expiry, single-use
 - **Shared User Database**: Same bcrypt/SHA256 hashed passwords as SAML
 - **MFA Support**: TOTP-based MFA when enabled for user
+- **Redirect URI Validation**: Basic validation (localhost and https only by default), configurable via `allowed_oidc_redirect_uris`
 
 ### Production Recommendations
 
-1. **Implement Client Authentication**: Add client secret validation in token endpoint
-2. **Use DynamoDB for Session Storage**: Replace in-memory storage with DynamoDB
-3. **Add Refresh Token Support**: Implement refresh token rotation
-4. **Implement PKCE**: Add Proof Key for Code Exchange for public clients
-5. **Rate Limiting**: Use API Gateway throttling or AWS WAF
-6. **Add Logging**: Enhanced CloudWatch logging for security events
-7. **Key Rotation**: Implement automatic key rotation for JWT signing keys
-8. **Add Consent Screen**: Implement OAuth consent flow
-9. **Client Registration**: Add dynamic client registration endpoint
-10. **Scope-based Access Control**: Implement fine-grained scope validation
+1. **Configure Allowed Redirect URIs**: Set `allowed_oidc_redirect_uris` variable with specific allowed redirect URIs for your applications
+2. **Implement Client Authentication**: Add client secret validation in token endpoint
+3. **Use DynamoDB for Session Storage**: Replace in-memory storage with DynamoDB for auth codes and sessions
+4. **Add Refresh Token Support**: Implement refresh token storage, validation, and rotation
+5. **Implement PKCE**: Add Proof Key for Code Exchange for public clients
+6. **Rate Limiting**: Use API Gateway throttling or AWS WAF
+7. **Add Logging**: Enhanced CloudWatch logging for security events
+8. **Key Rotation**: Implement automatic key rotation for JWT signing keys
+9. **Add Consent Screen**: Implement OAuth consent flow
+10. **Client Registration**: Add dynamic client registration endpoint
+11. **Scope-based Access Control**: Implement fine-grained scope validation
 
 ## Troubleshooting
 
@@ -334,10 +336,24 @@ Key metrics to monitor:
 
 Current implementation limitations:
 
-1. **In-Memory Storage**: Auth codes stored in Lambda memory (lost on cold start)
-2. **No Client Secrets**: Client authentication not enforced
-3. **No Refresh Token Implementation**: Refresh tokens generated but not validated
-4. **Limited Flows**: Only authorization code flow supported
+1. **In-Memory Storage**: Auth codes stored in Lambda memory (lost on cold start) - suitable for development/testing, use DynamoDB for production
+2. **No Client Secrets**: Client authentication not enforced in token endpoint - implement for production use
+3. **No Refresh Token Implementation**: Refresh tokens generated but not validated - implement refresh token storage and rotation for production
+4. **Limited Flows**: Only authorization code flow supported - implicit and hybrid flows not implemented
+5. **Redirect URI Validation**: Basic validation implemented (localhost and https URLs allowed by default) - configure `allowed_oidc_redirect_uris` variable for production with specific allowed URIs
+
+### Configuring Allowed Redirect URIs
+
+For production deployments, configure allowed redirect URIs in your `terraform.tfvars`:
+
+```hcl
+allowed_oidc_redirect_uris = [
+  "https://grafana.example.com/login/generic_oauth",
+  "https://app.example.com/oauth/callback"
+]
+```
+
+This prevents open redirect attacks by restricting where users can be redirected after authentication.
 5. **No Dynamic Registration**: Clients must be pre-configured
 
 These limitations are suitable for development/testing but should be addressed for production use.

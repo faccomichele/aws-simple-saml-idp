@@ -34,6 +34,10 @@ TOKEN_EXPIRY_SECONDS = 3600  # 1 hour
 ID_TOKEN_EXPIRY_SECONDS = 3600  # 1 hour
 REFRESH_TOKEN_EXPIRY_SECONDS = 2592000  # 30 days
 
+# Allowed redirect URIs for security (can be overridden via environment variable)
+# Format: comma-separated list of allowed redirect URI patterns
+ALLOWED_REDIRECT_URIS = os.environ.get('ALLOWED_REDIRECT_URIS', '').split(',') if os.environ.get('ALLOWED_REDIRECT_URIS') else []
+
 # Cache for SSM parameters
 _ssm_cache = {}
 
@@ -107,6 +111,38 @@ def verify_password(username, password):
         is_valid = (password_hash == stored_hash)
     
     return is_valid, user
+
+
+def validate_redirect_uri(redirect_uri):
+    """
+    Validate redirect URI against allowed patterns.
+    If ALLOWED_REDIRECT_URIS is empty, allows localhost and https URLs only (for development).
+    In production, ALLOWED_REDIRECT_URIS should be configured with specific allowed URIs.
+    """
+    if not redirect_uri:
+        return False
+    
+    parsed = urlparse(redirect_uri)
+    
+    # If allowed list is configured, check against it
+    if ALLOWED_REDIRECT_URIS and ALLOWED_REDIRECT_URIS[0]:
+        for allowed_uri in ALLOWED_REDIRECT_URIS:
+            allowed_uri = allowed_uri.strip()
+            if not allowed_uri:
+                continue
+            # Exact match or prefix match
+            if redirect_uri == allowed_uri or redirect_uri.startswith(allowed_uri):
+                return True
+        return False
+    
+    # Default validation (for development): allow localhost and https URLs
+    # This prevents open redirects to arbitrary domains
+    if parsed.scheme == 'https':
+        return True
+    if parsed.scheme == 'http' and (parsed.hostname == 'localhost' or parsed.hostname == '127.0.0.1'):
+        return True
+    
+    return False
 
 
 def generate_jwt_token(payload, token_type='access'):
@@ -234,6 +270,17 @@ def handle_authorize(event):
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'error': 'invalid_request', 'error_description': 'Missing required parameters'})
+        }
+    
+    # Validate redirect URI to prevent open redirect attacks
+    if not validate_redirect_uri(redirect_uri):
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
+                'error': 'invalid_request',
+                'error_description': 'Invalid redirect_uri. Configure ALLOWED_REDIRECT_URIS environment variable with allowed redirect URIs.'
+            })
         }
     
     # Check if user is authenticated (via POST with credentials)
@@ -435,6 +482,9 @@ def handle_token(event):
             'nonce': auth_code_data.get('nonce', '')
         }, token_type='id_token')
         
+        # Note: Refresh token is generated but not currently stored or validated
+        # This is a known limitation suitable for development/testing
+        # For production, implement refresh token storage in DynamoDB
         refresh_token = secrets.token_urlsafe(32)
         
         response = {

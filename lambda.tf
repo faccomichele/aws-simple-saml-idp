@@ -113,11 +113,12 @@ resource "aws_lambda_function" "oidc_processor" {
 
   environment {
     variables = {
-      USERS_TABLE          = aws_dynamodb_table.users.name
-      ROLES_TABLE          = aws_dynamodb_table.roles.name
-      IDP_ENTITY_ID        = local.idp_entity_id
-      IDP_BASE_URL         = var.idp_base_url
-      SSM_PARAMETER_PREFIX = "/${local.project_name}/${local.environment}"
+      USERS_TABLE              = aws_dynamodb_table.users.name
+      ROLES_TABLE              = aws_dynamodb_table.roles.name
+      IDP_ENTITY_ID            = local.idp_entity_id
+      IDP_BASE_URL             = var.idp_base_url
+      SSM_PARAMETER_PREFIX     = "/${local.project_name}/${local.environment}"
+      ALLOWED_REDIRECT_URIS    = join(",", var.allowed_oidc_redirect_uris)
     }
   }
 
