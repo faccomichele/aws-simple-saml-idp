@@ -34,6 +34,9 @@ SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
 # Default ACS URL for backward compatibility
 DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
 
+# Attribute prefix for custom SAML attributes
+ATTR_PREFIX = 'attr_'
+
 # Attribute mapping table: short names (stored in DynamoDB) -> full SAML attribute names
 ATTRIBUTE_MAPPING = {
     'attr_aws_role': 'https://aws.amazon.com/SAML/Attributes/Role',
@@ -179,7 +182,7 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
     # Process custom attributes with 'attr_' prefix
     if custom_attributes:
         for key, value in custom_attributes.items():
-            if key.startswith('attr_'):
+            if key.startswith(ATTR_PREFIX):
                 # Check if we have a mapping for this attribute
                 if key in ATTRIBUTE_MAPPING:
                     attr_name = ATTRIBUTE_MAPPING[key]
@@ -207,7 +210,7 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
                     attributes_xml.append(attr_xml)
                 else:
                     # For unknown attributes, use the key without 'attr_' prefix as the attribute name
-                    attr_name = key[5:]  # Remove 'attr_' prefix
+                    attr_name = key[len(ATTR_PREFIX):]
                     attr_value = str(value)
                     attr_xml = f'''      <saml:Attribute Name="{attr_name}">
         <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -687,7 +690,7 @@ def handle_sso(event):
                 role_data = {}
         
         # Extract custom attributes (those with 'attr_' prefix) from role_data
-        custom_attributes = {k: v for k, v in role_data.items() if k.startswith('attr_')}
+        custom_attributes = {k: v for k, v in role_data.items() if k.startswith(ATTR_PREFIX)}
         
         # Generate SAML response with the role's ACS URL and custom attributes
         saml_response = generate_saml_response(username, role_arn, acs_url, custom_attributes=custom_attributes)

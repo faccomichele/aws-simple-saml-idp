@@ -20,6 +20,9 @@ ROLES_TABLE = os.environ.get('ROLES_TABLE', 'simple-saml-idp-roles-dev')
 # Default ACS URL for backward compatibility
 DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
 
+# Attribute prefix for custom SAML attributes
+ATTR_PREFIX = 'attr_'
+
 # Bcrypt rounds with validation (safe range: 10-15)
 try:
     BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))
@@ -299,7 +302,14 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
                 return error_response("Invalid AWS role_arn format. Cannot extract account ID", 400)
         
         # Set defaults
-        account_name = data.get('account_name', account_id if account_id else 'Custom Application')
+        # For non-AWS applications, use the role_arn as a more descriptive account name
+        # (e.g., "grafana:viewer" becomes account_name if not specified)
+        if not account_id:
+            default_account_name = role_arn if role_arn else 'Application'
+        else:
+            default_account_name = account_id
+        
+        account_name = data.get('account_name', default_account_name)
         acs_url = data.get('acs_url', DEFAULT_ACS_URL)
         description = data.get('description', f"Role access for {username}")
         
@@ -327,7 +337,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
         
         # Add any custom attributes with 'attr_' prefix from the input data
         for key, value in data.items():
-            if key.startswith('attr_'):
+            if key.startswith(ATTR_PREFIX):
                 item[key] = value
         
         # Put item in DynamoDB
@@ -402,7 +412,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
         # Handle custom attributes with 'attr_' prefix
         attr_counter = 0
         for key, value in data.items():
-            if key.startswith('attr_'):
+            if key.startswith(ATTR_PREFIX):
                 placeholder = f"#attr{attr_counter}"
                 value_placeholder = f":attr{attr_counter}"
                 update_expressions.append(f"{placeholder} = {value_placeholder}")
