@@ -52,7 +52,7 @@ jobs:
     secrets: inherit
 
   stg-approval:
-    needs: [dev-website]
+    needs: dev-website
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
@@ -77,7 +77,7 @@ jobs:
           echo "=========================================="
 
   stg:
-    needs: [build, dev, dev-website, stg-approval]
+    needs: stg-approval
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
@@ -102,7 +102,7 @@ jobs:
     secrets: inherit
 
   prod-approval:
-    needs: [stg-website]
+    needs: dev-website
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD-Approval]"
     runs-on: ${{ vars.RUNNERS || 'ubuntu-latest' }}
@@ -127,7 +127,7 @@ jobs:
           echo "=========================================="
 
   prod:
-    needs: [build, dev, dev-website, stg, stg-website, prod-approval]
+    needs: prod-approval
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD]"
     uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
