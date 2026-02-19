@@ -23,6 +23,14 @@ DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
 # Attribute prefix for custom SAML attributes
 ATTR_PREFIX = 'attr_'
 
+# Attribute mapping table: short names (stored in DynamoDB) -> full SAML attribute names
+# This is now loaded from environment variable set by Terraform
+try:
+    ATTRIBUTE_MAPPING = json.loads(os.environ.get('ATTRIBUTE_MAPPING', '{}'))
+except (json.JSONDecodeError, ValueError):
+    print("Warning: Failed to load ATTRIBUTE_MAPPING from environment, using empty dict")
+    ATTRIBUTE_MAPPING = {}
+
 # Bcrypt rounds with validation (safe range: 10-15)
 try:
     BCRYPT_ROUNDS = int(os.environ.get('BCRYPT_ROUNDS', '12'))

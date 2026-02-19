@@ -38,18 +38,12 @@ DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
 ATTR_PREFIX = 'attr_'
 
 # Attribute mapping table: short names (stored in DynamoDB) -> full SAML attribute names
-ATTRIBUTE_MAPPING = {
-    'attr_aws_role': 'https://aws.amazon.com/SAML/Attributes/Role',
-    'attr_aws_role_session_name': 'https://aws.amazon.com/SAML/Attributes/RoleSessionName',
-    'attr_aws_session_duration': 'https://aws.amazon.com/SAML/Attributes/SessionDuration',
-    'attr_email': 'email',
-    'attr_name': 'name',
-    'attr_given_name': 'givenName',
-    'attr_surname': 'surname',
-    'attr_display_name': 'displayName',
-    'attr_uid': 'uid',
-    'attr_groups': 'groups',
-}
+# This is now loaded from environment variable set by Terraform
+try:
+    ATTRIBUTE_MAPPING = json.loads(os.environ.get('ATTRIBUTE_MAPPING', '{}'))
+except (json.JSONDecodeError, ValueError):
+    print("Warning: Failed to load ATTRIBUTE_MAPPING from environment, using empty dict")
+    ATTRIBUTE_MAPPING = {}
 
 # Cache for SSM parameters
 _ssm_cache = {}

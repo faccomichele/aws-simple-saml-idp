@@ -32,6 +32,7 @@ resource "aws_lambda_function" "saml_processor" {
       SSM_PARAMETER_PREFIX = "/${local.project_name}/${local.environment}"
       ALLOWED_AWS_ACCOUNTS = jsonencode(var.allowed_aws_accounts)
       SAML_PROVIDER_NAME   = "${var.saml_provider_name}-${local.environment}"
+      ATTRIBUTE_MAPPING    = jsonencode(local.attribute_mapping)
     }
   }
 
@@ -75,8 +76,9 @@ resource "aws_lambda_function" "manage_users_roles" {
 
   environment {
     variables = {
-      USERS_TABLE = aws_dynamodb_table.users.name
-      ROLES_TABLE = aws_dynamodb_table.roles.name
+      USERS_TABLE       = aws_dynamodb_table.users.name
+      ROLES_TABLE       = aws_dynamodb_table.roles.name
+      ATTRIBUTE_MAPPING = jsonencode(local.attribute_mapping)
     }
   }
 
