@@ -234,52 +234,84 @@ In each AWS account you want to enable SSO for:
 
 ### Configuring for Different Applications
 
-The IdP can be configured to work with various SAML 2.0 compatible applications by setting the `saml_acs_url` variable in your `terraform.tfvars`.
+The IdP can be configured to work with various SAML 2.0 compatible applications. Each role mapping in DynamoDB can have its own `acs_url` (Assertion Consumer Service URL), allowing different roles to redirect to different applications.
 
-#### AWS Console (Default)
+#### Adding Roles with ACS URL
 
-```hcl
-saml_acs_url = "https://signin.aws.amazon.com/saml"
+When adding a role mapping, specify the ACS URL for the target application:
+
+**AWS Console (Default)**
+
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AdminRole" \
+  "Production Account" \
+  "https://signin.aws.amazon.com/saml"
 ```
 
-This is the default configuration and requires no changes to work with AWS Console SSO.
+Or omit the ACS URL parameter to use AWS Console as default:
 
-#### Grafana Cloud
-
-To integrate with Grafana Cloud:
-
-1. In your Grafana Cloud settings, navigate to SAML authentication configuration
-2. Note your Grafana ACS URL (typically: `https://YOUR-STACK.grafana.net/saml/acs`)
-3. Update your `terraform.tfvars`:
-
-```hcl
-saml_acs_url = "https://YOUR-STACK.grafana.net/saml/acs"
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AdminRole" \
+  "Production Account"
 ```
 
-4. Upload your IdP metadata to Grafana Cloud:
-   - Get metadata from: `https://your-api-gateway-url/metadata`
-   - Upload to Grafana Cloud SAML configuration
+**Grafana Cloud**
 
-5. Configure attribute mappings in Grafana Cloud:
-   - Name ID: User email or username
-   - Role: Configure based on your Grafana roles
-
-#### Other SAML Applications
-
-For other SAML 2.0 compatible applications:
-
-1. Find the application's SAML ACS URL (also called SSO URL or Assertion Consumer Service URL) in its SAML configuration documentation
-2. Update your `terraform.tfvars` with the ACS URL:
-
-```hcl
-saml_acs_url = "https://your-app-domain.com/saml/acs"
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/GrafanaViewerRole" \
+  "Grafana Monitoring" \
+  "https://YOUR-STACK.grafana.net/saml/acs"
 ```
 
-3. Download or access your IdP metadata from: `https://your-api-gateway-url/metadata`
-4. Configure the application's SAML integration with your IdP metadata
-5. Map SAML attributes according to the application's requirements
+**Other SAML Applications**
 
-**Note**: After changing the `saml_acs_url`, run `terraform apply` to update the Lambda function configuration.
+```bash
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AppRole" \
+  "Custom Application" \
+  "https://your-app-domain.com/saml/acs"
+```
+
+#### Multi-Application Support
+
+You can configure a single user to access multiple applications by creating separate role mappings with different ACS URLs:
+
+```bash
+# AWS Console access
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/AdminRole" \
+  "AWS Production" \
+  "https://signin.aws.amazon.com/saml"
+
+# Grafana Cloud access
+./scripts/add-role.sh simple-saml-idp-roles-dev john.doe \
+  "arn:aws:iam::123456789012:role/GrafanaRole" \
+  "Grafana Monitoring" \
+  "https://mystack.grafana.net/saml/acs"
+```
+
+When the user logs in, they'll see all available roles and can choose which application to access.
+
+#### Manual Role Configuration
+
+You can also manually add roles to DynamoDB with the `acs_url` field:
+
+```json
+{
+  "username": "john.doe",
+  "role_arn": "arn:aws:iam::123456789012:role/AdminRole",
+  "account_name": "Production Account",
+  "account_id": "123456789012",
+  "acs_url": "https://signin.aws.amazon.com/saml",
+  "description": "Full administrator access",
+  "created_at": "2024-01-08T00:00:00Z"
+}
+```
+
+**Note**: If `acs_url` is not specified in a role, it defaults to AWS Console (`https://signin.aws.amazon.com/saml`) for backward compatibility.
 
 ## Usage
 

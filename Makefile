@@ -84,14 +84,14 @@ add-user: ## Add a user (Usage: make add-user USERNAME=john.doe PASSWORD=secret)
 	@TABLE_NAME=$$(terraform output -raw dynamodb_users_table); \
 	./scripts/add-user.sh $$TABLE_NAME $(USERNAME) $(PASSWORD)
 
-add-role: ## Add a role mapping (Usage: make add-role USERNAME=john.doe ROLE_ARN=arn:aws:iam::123:role/Admin ACCOUNT_NAME="Prod")
+add-role: ## Add a role mapping (Usage: make add-role USERNAME=john.doe ROLE_ARN=arn:aws:iam::123:role/Admin ACCOUNT_NAME="Prod" [ACS_URL="https://..."])
 	@if [ -z "$(USERNAME)" ] || [ -z "$(ROLE_ARN)" ] || [ -z "$(ACCOUNT_NAME)" ]; then \
 		echo "Error: USERNAME, ROLE_ARN, and ACCOUNT_NAME are required"; \
-		echo "Usage: make add-role USERNAME=john.doe ROLE_ARN=arn:aws:iam::123:role/Admin ACCOUNT_NAME='Production'"; \
+		echo "Usage: make add-role USERNAME=john.doe ROLE_ARN=arn:aws:iam::123:role/Admin ACCOUNT_NAME='Production' [ACS_URL='https://signin.aws.amazon.com/saml']"; \
 		exit 1; \
 	fi
 	@TABLE_NAME=$$(terraform output -raw dynamodb_roles_table); \
-	./scripts/add-role.sh $$TABLE_NAME $(USERNAME) $(ROLE_ARN) $(ACCOUNT_NAME)
+	./scripts/add-role.sh $$TABLE_NAME $(USERNAME) $(ROLE_ARN) $(ACCOUNT_NAME) $(ACS_URL)
 
 logs-lambda: ## Tail Lambda function logs
 	@FUNCTION_NAME=$$(terraform output -raw api_gateway_url | grep -oP '(?<=https://).*?(?=\.)'); \
