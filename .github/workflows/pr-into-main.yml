@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   dev-build:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[DEV BUILD]"
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
     with:
@@ -30,7 +30,7 @@ jobs:
 
   dev:
     needs: dev-build
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[DEV]"
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
@@ -43,7 +43,7 @@ jobs:
     secrets: inherit
 
   stg-build:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[STG BUILD]"
     needs: dev-build
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
@@ -55,7 +55,7 @@ jobs:
     secrets: inherit
 
   stg:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[STG]"
     needs: stg-build
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
@@ -68,7 +68,7 @@ jobs:
     secrets: inherit
 
   prod-build:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[PROD BUILD]"
     needs: [dev-build, stg-build]
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
@@ -80,7 +80,7 @@ jobs:
     secrets: inherit
 
   prod:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[PROD]"
     needs: prod-build
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
