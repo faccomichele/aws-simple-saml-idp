@@ -6,60 +6,88 @@ on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
   workflow_dispatch:
+    
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   id-token: write
   pull-requests: write
   contents: read
 
-
 jobs:
-  build:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    name: "[BUILD]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/lambda-build.yml@main
+  dev-build:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    name: "[DEV BUILD]"
+    uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
     with:
-      working-directory: './lambda'
+      environment: 'dev'
+      region: 'us-east-1'
+      working-directory: './lambdas'
+      full-rebuild: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.full-rebuild == 'true' }}
     secrets: inherit
 
   dev:
-    needs: build
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    needs: dev-build
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[DEV]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'dev'
-      region: 'eu-central-1'
+      region: 'us-east-1'
+      global: true
       working-directory: '.'
+      lambda-working-directory: './lambdas'
       action: 'plan'
-      download-lambda-artifacts: true
-      upload-output-artifact: false
+    secrets: inherit
+
+  stg-build:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    name: "[STG BUILD]"
+    needs: dev-build
+    uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
+    with:
+      environment: 'stg'
+      region: 'us-east-1'
+      working-directory: './lambdas'
+      full-rebuild: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.full-rebuild == 'true' }}
     secrets: inherit
 
   stg:
-    needs: [build, dev]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    needs: stg-build
+    uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'stg'
-      region: 'eu-central-1'
+      region: 'us-east-1'
+      global: true
       working-directory: '.'
       action: 'plan'
-      download-lambda-artifacts: true
-      upload-output-artifact: false
+    secrets: inherit
+
+  prod-build:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
+    name: "[PROD BUILD]"
+    needs: [dev-build, stg-build]
+    uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
+    with:
+      environment: 'prod'
+      region: 'us-east-1'
+      working-directory: './lambdas'
+      full-rebuild: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.full-rebuild == 'true' }}
     secrets: inherit
 
   prod:
-    needs: [build, dev]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    needs: prod-build
+    uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'prod'
-      region: 'eu-central-1'
+      region: 'us-east-1'
+      global: true
       working-directory: '.'
       action: 'plan'
-      download-lambda-artifacts: true
-      upload-output-artifact: false
     secrets: inherit

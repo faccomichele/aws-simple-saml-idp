@@ -4,7 +4,7 @@ resource "aws_iam_saml_provider" "central_saml_idp" {
   
   tags = {
     Environment = local.environment
-    Application = local.project_name
+    Application = local.project_alias
     ManagedBy   = "Terraform"
   }
 }

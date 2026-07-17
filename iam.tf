@@ -1,6 +1,6 @@
 # IAM Role for Lambda
 resource "aws_iam_role" "lambda_execution" {
-  name = "${local.project_name}-lambda-${local.environment}"
+  name = "${local.project_alias}-lambda-${local.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -16,7 +16,7 @@ resource "aws_iam_role" "lambda_execution" {
   })
 
   tags = {
-    Name = "${local.project_name}-lambda-${local.environment}"
+    Name = "${local.project_alias}-lambda-${local.environment}"
   }
 }
 
@@ -62,7 +62,7 @@ resource "aws_iam_role_policy" "lambda_ssm" {
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
         ]
-        Resource = "arn:aws:ssm:${local.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.project_name}/${local.environment}/*"
+        Resource = "arn:aws:ssm:${local.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${local.project_alias}/${local.environment}/*"
       },
       {
         Effect = "Allow"

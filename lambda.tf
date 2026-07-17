@@ -1,7 +1,7 @@
 # Lambda Layer for dependencies
 resource "aws_lambda_layer_version" "saml_processor_dependencies" {
   filename                 = "${path.module}/lambda/saml_processor-layer.zip"
-  layer_name               = "${local.project_name}-sp-dependencies-${local.environment}"
+  layer_name               = "${local.project_alias}-sp-dependencies-${local.environment}"
   compatible_runtimes      = ["python3.13"]
   source_code_hash         = filebase64sha256("${path.module}/lambda/saml_processor-layer.zip")
   compatible_architectures = ["x86_64", "arm64"]
@@ -11,7 +11,7 @@ resource "aws_lambda_layer_version" "saml_processor_dependencies" {
 # Lambda Function for SAML Processing
 resource "aws_lambda_function" "saml_processor" {
   filename         = "${path.module}/lambda/saml_processor.zip"
-  function_name    = "${local.project_name}-processor-${local.environment}"
+  function_name    = "${local.project_alias}-processor-${local.environment}"
   role             = aws_iam_role.lambda_execution.arn
   handler          = "index.lambda_handler"
   source_code_hash = filebase64sha256("${path.module}/lambda/saml_processor.zip")
@@ -29,7 +29,7 @@ resource "aws_lambda_function" "saml_processor" {
       IDP_ENTITY_ID        = local.idp_entity_id
       IDP_BASE_URL         = var.idp_base_url
       SESSION_DURATION     = var.session_duration_seconds
-      SSM_PARAMETER_PREFIX = "/${local.project_name}/${local.environment}"
+      SSM_PARAMETER_PREFIX = "/${local.project_alias}/${local.environment}"
       ALLOWED_AWS_ACCOUNTS = jsonencode(var.allowed_aws_accounts)
       SAML_PROVIDER_NAME   = "${var.saml_provider_name}-${local.environment}"
       ATTRIBUTE_MAPPING    = jsonencode(local.attribute_mapping)
@@ -37,7 +37,7 @@ resource "aws_lambda_function" "saml_processor" {
   }
 
   tags = {
-    Name = "${local.project_name}-processor-${local.environment}"
+    Name = "${local.project_alias}-processor-${local.environment}"
   }
 }
 
@@ -53,7 +53,7 @@ resource "aws_lambda_permission" "api_gateway" {
 # Lambda Layer for dependencies
 resource "aws_lambda_layer_version" "manage_users_roles_dependencies" {
   filename                 = "${path.module}/lambda/manage_users_roles-layer.zip"
-  layer_name               = "${local.project_name}-mur-dependencies-${local.environment}"
+  layer_name               = "${local.project_alias}-mur-dependencies-${local.environment}"
   compatible_runtimes      = ["python3.13"]
   source_code_hash         = filebase64sha256("${path.module}/lambda/manage_users_roles-layer.zip")
   compatible_architectures = ["x86_64", "arm64"]
@@ -63,7 +63,7 @@ resource "aws_lambda_layer_version" "manage_users_roles_dependencies" {
 # Lambda Function for User and Role Management
 resource "aws_lambda_function" "manage_users_roles" {
   filename         = "${path.module}/lambda/manage_users_roles.zip"
-  function_name    = "${local.project_name}-manage-users-roles-${local.environment}"
+  function_name    = "${local.project_alias}-manage-users-roles-${local.environment}"
   role             = aws_iam_role.lambda_execution.arn
   handler          = "index.lambda_handler"
   source_code_hash = filebase64sha256("${path.module}/lambda/manage_users_roles.zip")
@@ -83,6 +83,6 @@ resource "aws_lambda_function" "manage_users_roles" {
   }
 
   tags = {
-    Name = "${local.project_name}-manage-users-roles-${local.environment}"
+    Name = "${local.project_alias}-manage-users-roles-${local.environment}"
   }
 }

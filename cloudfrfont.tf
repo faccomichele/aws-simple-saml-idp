@@ -1,6 +1,6 @@
 # CloudFront Origin Access Identity
 resource "aws_cloudfront_origin_access_identity" "login_page" {
-  comment = "OAI for ${local.project_name} login page"
+  comment = "OAI for ${local.project_alias} login page"
 }
 
 # CloudFront Distribution
@@ -50,6 +50,6 @@ resource "aws_cloudfront_distribution" "login_page" {
   }
 
   tags = {
-    Name = "${local.project_name}-login-${local.environment}"
+    Name = "${local.project_alias}-login-${local.environment}"
   }
 }
