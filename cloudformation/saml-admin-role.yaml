@@ -39,7 +39,7 @@ Parameters:
   ProjectName:
     Type: String
     Description: Name of the GitHub repository (change this when copying to another repo)
-    Default: simple-saml-idp
+    Default: aws-simple-saml-idp
     MinLength: 1
     MaxLength: 100
     AllowedPattern: ^[a-zA-Z0-9._-]+$

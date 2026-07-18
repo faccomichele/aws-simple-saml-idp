@@ -1,6 +1,6 @@
 # This triggers on all merged PRs into main
 
-name: Cleanup/Destroy
+name: Main - Cleanup/Destroy
 
 on:
   workflow_dispatch:
@@ -9,34 +9,41 @@ permissions:
   id-token: write
   pull-requests: write
   contents: read
+      
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   dev:
     name: "[DEV]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'dev'
       region: 'eu-central-1'
+      global: true
       working-directory: '.'
       action: 'destroy'
     secrets: inherit
 
   stg:
     name: "[STG]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'stg'
       region: 'eu-central-1'
       working-directory: '.'
+      global: true
       action: 'destroy'
     secrets: inherit
 
   prod:
     name: "[PROD]"
-    uses: faccomichele/utils-n-scripts/.github/workflows/terraform-run.yml@main
+    uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'prod'
       region: 'eu-central-1'
+      global: true
       working-directory: '.'
       action: 'destroy'
     secrets: inherit
