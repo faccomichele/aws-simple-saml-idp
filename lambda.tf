@@ -1,21 +1,21 @@
 # Lambda Layer for dependencies
 resource "aws_lambda_layer_version" "saml_processor_dependencies" {
-  filename                 = "${path.module}/lambda/saml_processor-layer.zip"
+  filename                 = "${path.module}/lambdas/saml_processor-layer.zip"
   layer_name               = "${local.project_alias}-sp-dependencies-${local.environment}"
-  compatible_runtimes      = ["python3.13"]
-  source_code_hash         = filebase64sha256("${path.module}/lambda/saml_processor-layer.zip")
+  compatible_runtimes      = [local.python_runtime]
+  source_code_hash         = filebase64sha256("${path.module}/lambdas/saml_processor-layer.zip")
   compatible_architectures = ["x86_64", "arm64"]
   description              = "SAML and cryptography dependencies"
 }
 
 # Lambda Function for SAML Processing
 resource "aws_lambda_function" "saml_processor" {
-  filename         = "${path.module}/lambda/saml_processor.zip"
   function_name    = "${local.project_alias}-processor-${local.environment}"
+  filename         = "${path.module}/lambdas/saml_processor.zip"
   role             = aws_iam_role.lambda_execution.arn
-  handler          = "index.lambda_handler"
-  source_code_hash = filebase64sha256("${path.module}/lambda/saml_processor.zip")
-  runtime          = "python3.13"
+  source_code_hash = fileexists("${path.module}/lambdas/saml_processor.zip") ? filebase64sha256("${path.module}/lambdas/saml_processor.zip") : null
+  handler          = "handler.lambda_handler"
+  runtime          = local.python_runtime
   timeout          = 30
   memory_size      = 512
   architectures    = ["x86_64"]
@@ -52,22 +52,22 @@ resource "aws_lambda_permission" "api_gateway" {
 
 # Lambda Layer for dependencies
 resource "aws_lambda_layer_version" "manage_users_roles_dependencies" {
-  filename                 = "${path.module}/lambda/manage_users_roles-layer.zip"
+  filename                 = "${path.module}/lambdas/manage_users_roles-layer.zip"
   layer_name               = "${local.project_alias}-mur-dependencies-${local.environment}"
-  compatible_runtimes      = ["python3.13"]
-  source_code_hash         = filebase64sha256("${path.module}/lambda/manage_users_roles-layer.zip")
+  compatible_runtimes      = [local.python_runtime]
+  source_code_hash         = filebase64sha256("${path.module}/lambdas/manage_users_roles-layer.zip")
   compatible_architectures = ["x86_64", "arm64"]
   description              = "SAML and cryptography dependencies"
 }
 
 # Lambda Function for User and Role Management
 resource "aws_lambda_function" "manage_users_roles" {
-  filename         = "${path.module}/lambda/manage_users_roles.zip"
   function_name    = "${local.project_alias}-manage-users-roles-${local.environment}"
+  filename         = "${path.module}/lambdas/manage_users_roles.zip"
   role             = aws_iam_role.lambda_execution.arn
-  handler          = "index.lambda_handler"
-  source_code_hash = filebase64sha256("${path.module}/lambda/manage_users_roles.zip")
-  runtime          = "python3.13"
+  source_code_hash = fileexists("${path.module}/lambdas/manage_users_roles.zip") ? filebase64sha256("${path.module}/lambdas/manage_users_roles.zip") : null
+  handler          = "handler.lambda_handler"
+  runtime          = local.python_runtime
   timeout          = 30
   memory_size      = 256
   architectures    = ["x86_64"]
