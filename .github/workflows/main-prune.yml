@@ -20,7 +20,7 @@ jobs:
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'dev'
-      region: 'eu-central-1'
+      region: 'us-east-1'
       global: true
       working-directory: '.'
       action: 'destroy'
@@ -31,9 +31,9 @@ jobs:
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'stg'
-      region: 'eu-central-1'
-      working-directory: '.'
+      region: 'us-east-1'
       global: true
+      working-directory: '.'
       action: 'destroy'
     secrets: inherit
 
@@ -42,7 +42,7 @@ jobs:
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
       environment: 'prod'
-      region: 'eu-central-1'
+      region: 'us-east-1'
       global: true
       working-directory: '.'
       action: 'destroy'

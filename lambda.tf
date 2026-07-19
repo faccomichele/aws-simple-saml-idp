@@ -5,7 +5,7 @@ resource "aws_lambda_layer_version" "saml_processor_dependencies" {
   compatible_runtimes      = [local.python_runtime]
   source_code_hash         = filebase64sha256("${path.module}/lambdas/saml_processor-layer.zip")
   compatible_architectures = ["x86_64", "arm64"]
-  description              = "SAML and cryptography dependencies"
+  description              = "Required dependencies"
 }
 
 # Lambda Function for SAML Processing
@@ -57,7 +57,7 @@ resource "aws_lambda_layer_version" "manage_users_roles_dependencies" {
   compatible_runtimes      = [local.python_runtime]
   source_code_hash         = filebase64sha256("${path.module}/lambdas/manage_users_roles-layer.zip")
   compatible_architectures = ["x86_64", "arm64"]
-  description              = "SAML and cryptography dependencies"
+  description              = "Required dependencies"
 }
 
 # Lambda Function for User and Role Management
