@@ -42,3 +42,47 @@ resource "aws_ssm_parameter" "idp_base_url" {
     Name = "${local.project_alias}-idp-base-url-${local.environment}"
   }
 }
+
+resource "aws_ssm_parameter" "api_gateway_url" {
+  name        = "/${local.project_alias}/${local.environment}/outputs/api_gateway_url"
+  description = "API Gateway endpoint URL for SAML endpoints"
+  type        = "String"
+  value       = aws_apigatewayv2_stage.saml.invoke_url
+
+  tags = {
+    Name = "${local.project_alias}-api-gateway-url-${local.environment}"
+  }
+}
+
+resource "aws_ssm_parameter" "login_page_url" {
+  name        = "/${local.project_alias}/${local.environment}/outputs/login_page_url"
+  description = "Login page URL served through CloudFront"
+  type        = "String"
+  value       = "https://${aws_cloudfront_distribution.login_page.domain_name}/index.html"
+
+  tags = {
+    Name = "${local.project_alias}-login-page-url-${local.environment}"
+  }
+}
+
+resource "aws_ssm_parameter" "cloudfront_distribution_id" {
+  name        = "/${local.project_alias}/${local.environment}/outputs/cloudfront_distribution_id"
+  description = "CloudFront distribution ID"
+  type        = "String"
+  value       = aws_cloudfront_distribution.login_page.id
+
+  tags = {
+    Name = "${local.project_alias}-cloudfront-distribution-id-${local.environment}"
+  }
+}
+
+resource "aws_ssm_parameter" "website_bucket_name" {
+  name        = "/${local.project_alias}/${local.environment}/outputs/website_bucket_name"
+  description = "S3 bucket name for login page"
+  type        = "String"
+  value       = aws_s3_bucket.login_page.id
+
+  tags = {
+    Name = "${local.project_alias}-website-bucket-name-${local.environment}"
+  }
+}
