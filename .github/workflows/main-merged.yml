@@ -46,6 +46,7 @@ jobs:
       working-directory: '.'
       lambda-working-directory: './lambdas'
       action: 'apply'
+      upload-output-artifact: true
     secrets: inherit
 
   dev-website:
@@ -82,6 +83,7 @@ jobs:
       global: true
       working-directory: '.'
       action: 'apply'
+      upload-output-artifact: true
     secrets: inherit
 
   stg-website:
@@ -118,6 +120,7 @@ jobs:
       global: true
       working-directory: '.'
       action: 'apply'
+      upload-output-artifact: true
     secrets: inherit
 
   prod-website:
