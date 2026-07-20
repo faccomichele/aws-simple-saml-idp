@@ -5,6 +5,7 @@ locals {
   project_alias       = "simple-saml-idp"
   log_retention_days  = local.environment == "dev" ? 7 : 30
   python_runtime      = "python3.13"
+  tags                = var.tags 
 }
 
 locals {

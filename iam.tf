@@ -15,9 +15,12 @@ resource "aws_iam_role" "lambda_execution" {
     ]
   })
 
-  tags = {
-    Name = "${local.project_alias}-lambda-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-lambda-${local.environment}"
+      File = "iam.tf"
+    }
+  )
 }
 
 resource "aws_iam_role_policy" "lambda_dynamodb" {

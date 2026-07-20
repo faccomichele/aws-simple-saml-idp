@@ -22,6 +22,7 @@ dynamodb = boto3.resource('dynamodb')
 ssm = boto3.client('ssm')
 
 # Environment variables
+ENVIRONMENT = os.environ['ENVIRONMENT']
 USERS_TABLE = os.environ['USERS_TABLE']
 ROLES_TABLE = os.environ['ROLES_TABLE']
 IDP_ENTITY_ID = os.environ['IDP_ENTITY_ID']
@@ -387,8 +388,8 @@ def generate_qr_code(username, secret):
         # Create provisioning URI for Google Authenticator
         totp = pyotp.TOTP(secret)
         provisioning_uri = totp.provisioning_uri(
-            name=username,
-            issuer_name="Simple SAML IdP"
+            name=f"{username}@{ENVIRONMENT}",
+            issuer_name=f"{IDP_ENTITY_ID}/index.html"
         )
         
         # Generate QR code

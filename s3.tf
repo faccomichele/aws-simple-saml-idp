@@ -2,9 +2,12 @@
 resource "aws_s3_bucket" "login_page" {
   bucket = "${local.project_alias}-login-${local.environment}-${data.aws_caller_identity.current.account_id}"
 
-  tags = {
-    Name = "${local.project_alias}-login-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-login-${local.environment}"
+      File = "s3.tf"
+    }
+  )
 }
 
 resource "aws_s3_bucket_public_access_block" "login_page" {

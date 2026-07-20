@@ -49,7 +49,10 @@ resource "aws_cloudfront_distribution" "login_page" {
     cloudfront_default_certificate = true
   }
 
-  tags = {
-    Name = "${local.project_alias}-login-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-login-${local.environment}"
+      File = "cloudfrfont.tf"
+    }
+  )
 }
