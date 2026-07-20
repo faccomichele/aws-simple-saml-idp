@@ -388,8 +388,8 @@ def generate_qr_code(username, secret):
         # Create provisioning URI for Google Authenticator
         totp = pyotp.TOTP(secret)
         provisioning_uri = totp.provisioning_uri(
-            name=f"{username}@{ENVIRONMENT}",
-            issuer_name=f"{IDP_ENTITY_ID}/index.html"
+            name=f"{username} ({ENVIRONMENT})",
+            issuer_name=IDP_ENTITY_ID.removeprefix('https://').removeprefix('http://')
         )
         
         # Generate QR code
