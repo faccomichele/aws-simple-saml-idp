@@ -640,18 +640,10 @@
                     // Automatically continue to SSO when a role is selected
                     // Create and submit the SSO form immediately (no extra confirmation)
                     try {
-                        // Open a new page first so the POST targets it reliably.
-                        const targetWindowName = `aws_sso_${Date.now()}`;
-                        const targetWindow = window.open('about:blank', targetWindowName, 'noopener,noreferrer');
-                        if (!targetWindow) {
-                            showError('Unable to open new page. Please allow pop-ups for this site.');
-                            return;
-                        }
-
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = `${API_BASE_URL}/sso`;
-                        form.target = targetWindowName;
+                        form.target = '_blank';
 
                         const usernameInput = document.createElement('input');
                         usernameInput.type = 'hidden';
@@ -673,6 +665,7 @@
 
                         document.body.appendChild(form);
                         form.submit();
+                        document.body.removeChild(form);
                     } catch (err) {
                         console.error('Auto SSO submit error:', err);
                     }
