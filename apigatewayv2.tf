@@ -11,9 +11,12 @@ resource "aws_apigatewayv2_api" "saml" {
     max_age       = 300
   }
 
-  tags = {
-    Name = "${local.project_alias}-api-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-api-${local.environment}"
+      File = "apigatewayv2.tf"
+    }
+  )
 }
 
 # Lambda Integration
@@ -82,7 +85,10 @@ resource "aws_apigatewayv2_stage" "saml" {
     })
   }
 
-  tags = {
-    Name = "${local.project_alias}-api-stage-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-api-stage-${local.environment}"
+      File = "apigatewayv2.tf"
+    }
+  )
 }

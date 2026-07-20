@@ -24,6 +24,7 @@ resource "aws_lambda_function" "saml_processor" {
 
   environment {
     variables = {
+      ENVIRONMENT          = local.environment
       USERS_TABLE          = aws_dynamodb_table.users.name
       ROLES_TABLE          = aws_dynamodb_table.roles.name
       IDP_ENTITY_ID        = local.idp_entity_id
@@ -36,9 +37,12 @@ resource "aws_lambda_function" "saml_processor" {
     }
   }
 
-  tags = {
-    Name = "${local.project_alias}-processor-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-processor-${local.environment}"
+      File = "lambda.tf"
+    }
+  )
 }
 
 # Lambda Permission for API Gateway
@@ -82,7 +86,10 @@ resource "aws_lambda_function" "manage_users_roles" {
     }
   }
 
-  tags = {
-    Name = "${local.project_alias}-manage-users-roles-${local.environment}"
-  }
+  tags = merge(local.tags,
+    {
+      Name = "${local.project_alias}-manage-users-roles-${local.environment}"
+      File = "lambda.tf"
+    }
+  )
 }

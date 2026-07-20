@@ -47,8 +47,8 @@ Parameters:
 
   SAMLProviderName:
     Type: String
-    Description: The name of the existing SAML Provider in IAM (e.g., SimpleSAMLIdP)
-    Default: SimpleSAMLIdP
+    Description: The name of the existing SAML Provider in IAM (e.g., CentralSAMLIdP)
+    Default: CentralSAMLIdP
     MinLength: 1
   
   RoleName:
