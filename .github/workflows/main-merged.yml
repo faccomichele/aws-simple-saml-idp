@@ -60,10 +60,18 @@ jobs:
       working-directory: './website'
     secrets: inherit
 
+  stg-wait-gate:
+    needs: dev-build
+    runs-on: ${{ vars.RUNNERS_AMD64 || 'ubuntu-latest' }}
+    environment: stg-wait-gate
+    steps:
+      - name: Countdown to STG deployment
+        run: echo "Waiting for STG deployment gate..."
+
   stg-build:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[STG BUILD]"
-    needs: dev-build
+    needs: stg-wait-gate
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
     with:
       environment: 'stg'
@@ -97,10 +105,18 @@ jobs:
       working-directory: './website'
     secrets: inherit
 
+  prod-wait-gate:
+    needs: [dev-website, stg-website]
+    runs-on: ${{ vars.RUNNERS_AMD64 || 'ubuntu-latest' }}
+    environment: prod-wait-gate
+    steps:
+      - name: Countdown to PROD deployment
+        run: echo "Waiting for PROD deployment gate..."
+
   prod-build:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) }}
     name: "[PROD BUILD]"
-    needs: [dev-website, stg-website]
+    needs: prod-wait-gate
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
     with:
       environment: 'prod'
