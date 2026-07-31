@@ -18,7 +18,7 @@ variable "idp_base_url" {
 variable "session_duration_seconds" {
   description = "AWS session duration in seconds (900-43200)"
   type        = number
-  default     = 3600
+  default     = 43200
 }
 
 variable "allowed_aws_accounts" {

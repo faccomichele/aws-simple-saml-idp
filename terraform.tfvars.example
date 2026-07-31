@@ -9,7 +9,7 @@ idp_base_url  = "https://your-api-gateway-id.execute-api.us-east-1.amazonaws.com
 # Session duration for AWS Console (in seconds)
 # Minimum: 900 (15 minutes)
 # Maximum: 43200 (12 hours)
-session_duration_seconds = 3600
+session_duration_seconds = 43200  # 12 hours (maximum)
 
 # List of allowed AWS account IDs (leave empty to allow all accounts)
 allowed_aws_accounts = [

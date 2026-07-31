@@ -147,6 +147,7 @@ Resources:
     Properties:
       RoleName: !Ref RoleName
       Description: Administrator role for SAML SSO federation
+      MaxSessionDuration: 43200
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
