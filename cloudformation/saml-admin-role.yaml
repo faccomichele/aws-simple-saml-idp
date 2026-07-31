@@ -16,6 +16,12 @@ Metadata:
         Parameters:
           - SAMLProviderName
           - RoleName
+      - Label:
+          default: SAML Provider Configuration (leave empty to skip creation)
+        Parameters:
+          - MetadataXMLDev
+          - MetadataXMLStg
+          - MetadataXMLProd
     ParameterLabels:
       Organization:
         default: GitHub Organization
@@ -25,6 +31,12 @@ Metadata:
         default: SAML Provider Name
       RoleName:
         default: Role Name
+      MetadataXMLDev:
+        default: SAML Metadata XML (dev)
+      MetadataXMLStg:
+        default: SAML Metadata XML (stg)
+      MetadataXMLProd:
+        default: SAML Metadata XML (prod)
 
 Parameters:
   Organization:
@@ -47,17 +59,89 @@ Parameters:
 
   SAMLProviderName:
     Type: String
-    Description: The name of the existing SAML Provider in IAM (e.g., CentralSAMLIdP)
+    Description: The name of the SAML Provider in IAM (e.g., CentralSAMLIdP)
     Default: CentralSAMLIdP
     MinLength: 1
-  
+
+  MetadataXMLDev:
+    Type: String
+    Description: SAML metadata document XML for the dev provider (leave empty to skip provider creation)
+    Default: ''
+
+  MetadataXMLStg:
+    Type: String
+    Description: SAML metadata document XML for the stg provider (leave empty to skip provider creation)
+    Default: ''
+
+  MetadataXMLProd:
+    Type: String
+    Description: SAML metadata document XML for the prod provider (leave empty to skip provider creation)
+    Default: ''
+
   RoleName:
     Type: String
     Description: The name of the IAM Role to create
     Default: SAMLAdminRole
     AllowedPattern: '[\w+=,.@-]+'
 
+Conditions:
+  CreateProviderDev: !Not [!Equals [!Ref MetadataXMLDev, '']]
+  CreateProviderStg: !Not [!Equals [!Ref MetadataXMLStg, '']]
+  CreateProviderProd: !Not [!Equals [!Ref MetadataXMLProd, '']]
+  NoProviders: !Not [!Or [!Or [!Condition CreateProviderDev, !Condition CreateProviderStg], !Condition CreateProviderProd]]
+  ShowDevStatement: !Or [!Condition CreateProviderDev, !Condition NoProviders]
+  ShowStgStatement: !Or [!Condition CreateProviderStg, !Condition NoProviders]
+  ShowProdStatement: !Or [!Condition CreateProviderProd, !Condition NoProviders]
+
 Resources:
+  SAMLProviderDev:
+    Condition: CreateProviderDev
+    Type: AWS::IAM::SAMLProvider
+    Properties:
+      Name: !Sub '${SAMLProviderName}-dev'
+      SamlMetadataDocument: !Ref MetadataXMLDev
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Organization
+          Value: !Ref Organization
+        - Key: Environment
+          Value: dev
+        - Key: Automation
+          Value: CloudFormation
+
+  SAMLProviderStg:
+    Condition: CreateProviderStg
+    Type: AWS::IAM::SAMLProvider
+    Properties:
+      Name: !Sub '${SAMLProviderName}-stg'
+      SamlMetadataDocument: !Ref MetadataXMLStg
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Organization
+          Value: !Ref Organization
+        - Key: Environment
+          Value: stg
+        - Key: Automation
+          Value: CloudFormation
+
+  SAMLProviderProd:
+    Condition: CreateProviderProd
+    Type: AWS::IAM::SAMLProvider
+    Properties:
+      Name: !Sub '${SAMLProviderName}-prod'
+      SamlMetadataDocument: !Ref MetadataXMLProd
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Organization
+          Value: !Ref Organization
+        - Key: Environment
+          Value: prod
+        - Key: Automation
+          Value: CloudFormation
+
   SAMLAdminRole:
     Type: AWS::IAM::Role
     Properties:
@@ -66,27 +150,36 @@ Resources:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
-            Principal:
-              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-dev'
-            Action: 'sts:AssumeRoleWithSAML'
-            Condition:
-              StringEquals:
-                'SAML:aud': 'https://signin.aws.amazon.com/saml'
-          - Effect: Allow
-            Principal:
-              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-stg'
-            Action: 'sts:AssumeRoleWithSAML'
-            Condition:
-              StringEquals:
-                'SAML:aud': 'https://signin.aws.amazon.com/saml'
-          - Effect: Allow
-            Principal:
-              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-prod'
-            Action: 'sts:AssumeRoleWithSAML'
-            Condition:
-              StringEquals:
-                'SAML:aud': 'https://signin.aws.amazon.com/saml'
+          - !If
+            - ShowDevStatement
+            - Effect: Allow
+              Principal:
+                Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-dev'
+              Action: 'sts:AssumeRoleWithSAML'
+              Condition:
+                StringEquals:
+                  'SAML:aud': 'https://signin.aws.amazon.com/saml'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - ShowStgStatement
+            - Effect: Allow
+              Principal:
+                Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-stg'
+              Action: 'sts:AssumeRoleWithSAML'
+              Condition:
+                StringEquals:
+                  'SAML:aud': 'https://signin.aws.amazon.com/saml'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - ShowProdStatement
+            - Effect: Allow
+              Principal:
+                Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:saml-provider/${SAMLProviderName}-prod'
+              Action: 'sts:AssumeRoleWithSAML'
+              Condition:
+                StringEquals:
+                  'SAML:aud': 'https://signin.aws.amazon.com/saml'
+            - !Ref 'AWS::NoValue'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AdministratorAccess'
       Tags:

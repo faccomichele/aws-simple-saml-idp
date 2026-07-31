@@ -69,7 +69,7 @@ jobs:
       environment: 'stg'
       region: 'us-east-1'
       working-directory: './lambdas'
-      full-rebuild: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.full-rebuild == 'true' }}
+      full-rebuild: true
     secrets: inherit
 
   stg:
@@ -106,7 +106,7 @@ jobs:
       environment: 'prod'
       region: 'us-east-1'
       working-directory: './lambdas'
-      full-rebuild: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.full-rebuild == 'true' }}
+      full-rebuild: true
     secrets: inherit
 
   prod:
