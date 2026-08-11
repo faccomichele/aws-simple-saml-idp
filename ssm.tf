@@ -11,12 +11,10 @@ resource "aws_ssm_parameter" "saml_private_key" {
     ignore_changes = [value]
   }
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-saml-private-key-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-saml-private-key-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }
 
 resource "aws_ssm_parameter" "saml_certificate" {
@@ -29,12 +27,10 @@ resource "aws_ssm_parameter" "saml_certificate" {
     ignore_changes = [value]
   }
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-saml-certificate-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-saml-certificate-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }
 
 resource "aws_ssm_parameter" "idp_base_url" {
@@ -44,12 +40,10 @@ resource "aws_ssm_parameter" "idp_base_url" {
   value       = aws_apigatewayv2_stage.saml.invoke_url
   count       = var.idp_base_url != "placeholder" ? 0 : 1
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-idp-base-url-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-idp-base-url-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }
 
 resource "aws_ssm_parameter" "api_gateway_url" {
@@ -58,12 +52,10 @@ resource "aws_ssm_parameter" "api_gateway_url" {
   type        = "String"
   value       = aws_apigatewayv2_stage.saml.invoke_url
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-api-gateway-url-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags ={
+    Name = "${local.project_alias}-api-gateway-url-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }
 
 resource "aws_ssm_parameter" "login_page_url" {
@@ -72,12 +64,10 @@ resource "aws_ssm_parameter" "login_page_url" {
   type        = "String"
   value       = "https://${aws_cloudfront_distribution.login_page.domain_name}/index.html"
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-login-page-url-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-login-page-url-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }
 
 resource "aws_ssm_parameter" "cloudfront_distribution_id" {
@@ -86,12 +76,10 @@ resource "aws_ssm_parameter" "cloudfront_distribution_id" {
   type        = "String"
   value       = aws_cloudfront_distribution.login_page.id
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-cloudfront-distribution-id-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-cloudfront-distribution-id-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }
 
 resource "aws_ssm_parameter" "website_bucket_name" {
@@ -100,10 +88,8 @@ resource "aws_ssm_parameter" "website_bucket_name" {
   type        = "String"
   value       = aws_s3_bucket.login_page.id
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-website-bucket-name-${local.environment}"
-      File = "ssm.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-website-bucket-name-${local.environment}"
+    RepositoryFile = "ssm.tf"
+  }
 }

@@ -37,12 +37,10 @@ resource "aws_lambda_function" "saml_processor" {
     }
   }
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-processor-${local.environment}"
-      File = "lambda.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-processor-${local.environment}"
+    RepositoryFile = "lambda.tf"
+  }
 }
 
 # Lambda Permission for API Gateway
@@ -86,10 +84,8 @@ resource "aws_lambda_function" "manage_users_roles" {
     }
   }
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-manage-users-roles-${local.environment}"
-      File = "lambda.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-manage-users-roles-${local.environment}"
+    RepositoryFile = "lambda.tf"
+  }
 }
