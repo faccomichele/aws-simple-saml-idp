@@ -6,7 +6,7 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
   tags = merge(local.tags,
     {
       Name = "${local.project_alias}-lambda-logs-${local.environment}"
-      File = "cloudwatch.tf"
+      RepositoryFile = "cloudwatch.tf"
     }
   )
 }
@@ -19,7 +19,7 @@ resource "aws_cloudwatch_log_group" "api_logs" {
   tags = merge(local.tags,
     {
       Name = "${local.project_alias}-api-logs-${local.environment}"
-      File = "cloudwatch.tf"
+      RepositoryFile = "cloudwatch.tf"
     }
   )
 }

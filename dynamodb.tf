@@ -31,12 +31,10 @@ resource "aws_dynamodb_table" "users" {
     enabled = true
   }
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-users-${local.environment}"
-      File = "dynamodb.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-users-${local.environment}"
+    RepositoryFile = "dynamodb.tf"
+  }
 }
 
 resource "aws_dynamodb_table" "roles" {
@@ -63,10 +61,8 @@ resource "aws_dynamodb_table" "roles" {
     enabled = true
   }
 
-  tags = merge(local.tags,
-    {
-      Name = "${local.project_alias}-roles-${local.environment}"
-      File = "dynamodb.tf"
-    }
-  )
+  tags = {
+    Name = "${local.project_alias}-roles-${local.environment}"
+    RepositoryFile = "dynamodb.tf"
+  }
 }

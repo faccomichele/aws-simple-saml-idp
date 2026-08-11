@@ -52,7 +52,7 @@ resource "aws_cloudfront_distribution" "login_page" {
   tags = merge(local.tags,
     {
       Name = "${local.project_alias}-login-${local.environment}"
-      File = "cloudfrfont.tf"
+      RepositoryFile = "cloudfrfont.tf"
     }
   )
 }
