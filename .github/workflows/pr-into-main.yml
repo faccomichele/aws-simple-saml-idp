@@ -35,7 +35,6 @@ jobs:
 
   dev:
     needs: dev-build
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[DEV]"
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
     with:
@@ -48,6 +47,7 @@ jobs:
     secrets: inherit
 
   stg-wait-gate:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]')
     needs: dev-build
     runs-on: ${{ vars.RUNNERS_AMD64 || 'ubuntu-latest' }}
     environment: stg-wait-gate
@@ -56,7 +56,6 @@ jobs:
         run: echo "Waiting for STG deployment gate..."
 
   stg-build:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[STG BUILD]"
     needs: stg-wait-gate
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
@@ -68,7 +67,6 @@ jobs:
     secrets: inherit
 
   stg:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[STG]"
     needs: stg-build
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
@@ -89,7 +87,6 @@ jobs:
         run: echo "Waiting for PROD deployment gate..."
 
   prod-build:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[PROD BUILD]"
     needs: prod-wait-gate
     uses: faccomichele/gha-reusables/.github/workflows/lambda-build.yml@main
@@ -101,7 +98,6 @@ jobs:
     secrets: inherit
 
   prod:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     name: "[PROD]"
     needs: prod-build
     uses: faccomichele/gha-reusables/.github/workflows/terraform-run.yml@main
