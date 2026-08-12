@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: terraform
+    directory: "/"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: "/lambdas/manage_users_roles"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: "/lambdas/saml_processor"
+    schedule:
+      interval: weekly
