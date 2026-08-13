@@ -22,6 +22,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+s3backend.tf
 
 # Ignore transient lock info files created by terraform apply
 .terraform.tfstate.lock.info
@@ -60,6 +61,21 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.pytest_cache/
+.venv/
+
+# VSCode
+.vscode/
 
 # Metadata files
 saml-metadata*.xml
+
+# CodeQL agent output (local scan artifacts)
+codeql-agent-results/
+codeql-custom-queries-actions/
+
+# Act related files
+local.md
+.secrets
+.vars
+.actrc
