@@ -34,11 +34,12 @@ resource "aws_lambda_function" "saml_processor" {
       ALLOWED_AWS_ACCOUNTS = jsonencode(var.allowed_aws_accounts)
       SAML_PROVIDER_NAME   = "${var.saml_provider_name}-${local.environment}"
       ATTRIBUTE_MAPPING    = jsonencode(local.attribute_mapping)
+      LOGIN_PAGE_URL       = "https://${aws_cloudfront_distribution.login_page.domain_name}"
     }
   }
 
   tags = {
-    Name = "${local.project_alias}-processor-${local.environment}"
+    Name           = "${local.project_alias}-processor-${local.environment}"
     RepositoryFile = "lambda.tf"
   }
 }
@@ -85,7 +86,7 @@ resource "aws_lambda_function" "manage_users_roles" {
   }
 
   tags = {
-    Name = "${local.project_alias}-manage-users-roles-${local.environment}"
+    Name           = "${local.project_alias}-manage-users-roles-${local.environment}"
     RepositoryFile = "lambda.tf"
   }
 }

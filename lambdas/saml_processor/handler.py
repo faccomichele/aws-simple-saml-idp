@@ -6,8 +6,12 @@ import json
 import base64
 import os
 import io
+import re
+import zlib
+import html as html_utils
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlencode
+from xml.sax.saxutils import escape as xml_escape
 
 import bcrypt
 import pyotp
@@ -34,6 +38,15 @@ SAML_PROVIDER_NAME = os.environ.get('SAML_PROVIDER_NAME', 'SimpleSAMLIdP')
 
 # Default ACS URL for backward compatibility
 DEFAULT_ACS_URL = 'https://signin.aws.amazon.com/saml'
+
+# Defaults preserving classic AWS Console behaviour
+DEFAULT_AUDIENCE = 'urn:amazon:webservices'
+DEFAULT_NAMEID_FORMAT = 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+
+# URL of the static login page (used to hand off SP-initiated AuthnRequests)
+LOGIN_PAGE_URL = os.environ.get('LOGIN_PAGE_URL', 'placeholder')
+
+VALID_REQUEST_ID = re.compile(r'[_A-Za-z0-9.\-]{1,256}')
 
 # Attribute prefix for custom SAML attributes
 ATTR_PREFIX = 'attr_'
@@ -83,6 +96,18 @@ try:
 except Exception as e:
     print(f"Error loading IDP_BASE_URL from SSM: {e}")
 
+# If `LOGIN_PAGE_URL` was configured as the literal 'placeholder', fall back to
+# the IdP entity ID (which defaults to the CloudFront distribution URL) so the
+# SP-initiated flow can redirect users to the hosted login page.
+try:
+    if LOGIN_PAGE_URL == 'placeholder':
+        if isinstance(IDP_ENTITY_ID, str) and IDP_ENTITY_ID.startswith('http'):
+            LOGIN_PAGE_URL = IDP_ENTITY_ID.rstrip('/')
+        else:
+            print("Warning: LOGIN_PAGE_URL not set and IDP_ENTITY_ID is not a URL; SP-initiated login disabled")
+except Exception as e:
+    print(f"Error loading LOGIN_PAGE_URL: {e}")
+
 
 def generate_saml_metadata():
     """Generate SAML metadata XML"""
@@ -119,7 +144,9 @@ def generate_saml_metadata():
     return metadata
 
 
-def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION_DURATION, custom_attributes=None):
+def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION_DURATION,
+                           custom_attributes=None, audience=None, name_id=None,
+                           name_id_format=None, in_response_to=None):
     """
     Generate SAML Response for SAML-enabled applications
     
@@ -132,10 +159,26 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
         acs_url: Assertion Consumer Service URL
         session_duration: Session duration in seconds
         custom_attributes: Dict of custom attributes with 'attr_' prefix keys
+        audience: Intended audience (SP entity ID); defaults to 'urn:amazon:webservices'
+        name_id: Value used for the NameID element; defaults to username
+        name_id_format: NameID format URI; defaults to the persistent format
+        in_response_to: AuthnRequest ID when answering an SP-initiated login
     """
     now = datetime.utcnow()
     not_before = now - timedelta(minutes=5)
     not_on_or_after = now + timedelta(seconds=session_duration)
+    
+    audience = audience or DEFAULT_AUDIENCE
+    name_id_format = name_id_format or DEFAULT_NAMEID_FORMAT
+    name_id_value = name_id or username
+    
+    # XML-escape all externally sourced values interpolated into the document
+    esc_entity_id = xml_escape(IDP_ENTITY_ID)
+    esc_acs_url = xml_escape(acs_url)
+    esc_audience = xml_escape(audience)
+    esc_name_id = xml_escape(name_id_value)
+    esc_name_id_format = xml_escape(name_id_format)
+    in_response_to_attr = f' InResponseTo="{xml_escape(in_response_to)}"' if in_response_to else ''
     
     # Initialize variables for AWS-specific attributes
     principal_arn = None
@@ -241,8 +284,8 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
                      ID="{response_id}"
                      Version="2.0"
                      IssueInstant="{issue_instant}"
-                     Destination="{acs_url}">
-  <saml:Issuer>{IDP_ENTITY_ID}</saml:Issuer>
+                     Destination="{esc_acs_url}">
+  <saml:Issuer>{esc_entity_id}</saml:Issuer>
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
   </samlp:Status>
@@ -250,18 +293,18 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
                   ID="{assertion_id}"
                   Version="2.0"
                   IssueInstant="{issue_instant}">
-    <saml:Issuer>{IDP_ENTITY_ID}</saml:Issuer>
+    <saml:Issuer>{esc_entity_id}</saml:Issuer>
     <saml:Subject>
-      <saml:NameID Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">{username}</saml:NameID>
+      <saml:NameID Format="{esc_name_id_format}">{esc_name_id}</saml:NameID>
       <saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
         <saml:SubjectConfirmationData NotOnOrAfter="{not_on_or_after_str}"
-                                     Recipient="{acs_url}"/>
+                                     Recipient="{esc_acs_url}"{in_response_to_attr}/>
       </saml:SubjectConfirmation>
     </saml:Subject>
     <saml:Conditions NotBefore="{not_before_str}"
                     NotOnOrAfter="{not_on_or_after_str}">
       <saml:AudienceRestriction>
-        <saml:Audience>urn:amazon:webservices</saml:Audience>
+        <saml:Audience>{esc_audience}</saml:Audience>
       </saml:AudienceRestriction>
     </saml:Conditions>
     <saml:AuthnStatement AuthnInstant="{issue_instant}"
@@ -465,19 +508,26 @@ def get_user_roles(username):
                 continue
             
             arn_parts = role_arn.split(':')
-            if len(arn_parts) < 6:
-                print(f"Skipping malformed role ARN: {role_arn}")
-                continue
             
-            account_id = arn_parts[4]
-            
-            # Filter by allowed accounts if configured
-            if ALLOWED_AWS_ACCOUNTS and account_id not in ALLOWED_AWS_ACCOUNTS:
-                continue
-            
-            # Extract role name safely
-            role_path = arn_parts[5] if len(arn_parts) > 5 else ''
-            role_name = role_path.split('/')[-1] if '/' in role_path else role_path
+            if role_arn.startswith('arn:aws:'):
+                # AWS IAM role ARN: validate format and apply the account allowlist
+                if len(arn_parts) < 6 or arn_parts[0] != 'arn' or arn_parts[2] != 'iam':
+                    print(f"Skipping malformed role ARN: {role_arn}")
+                    continue
+                
+                account_id = arn_parts[4]
+                
+                # Filter by allowed accounts if configured
+                if ALLOWED_AWS_ACCOUNTS and account_id not in ALLOWED_AWS_ACCOUNTS:
+                    continue
+                
+                # Extract role name safely
+                role_path = arn_parts[5] if len(arn_parts) > 5 else ''
+                role_name = role_path.split('/')[-1] if '/' in role_path else role_path
+            else:
+                # Application pseudo-role (e.g. 'grafana:viewer') for non-AWS SaaS apps
+                account_id = item.get('account_id', '')
+                role_name = arn_parts[-1] if len(arn_parts) > 1 else role_arn
             
             roles.append({
                 'role_arn': role_arn,
@@ -506,6 +556,24 @@ def create_html_response(content, status_code=200):
         },
         'body': content
     }
+
+
+def create_error_html(message, status_code=400):
+    """Create a minimal HTML error page"""
+    safe_message = html_utils.escape(message, quote=True)
+    content = f'''<!DOCTYPE html>
+<html>
+<head>
+    <title>SSO Error</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+             text-align: center; padding-top: 3rem;">
+    <h1>Single Sign-On Error</h1>
+    <p>{safe_message}</p>
+    <p><a href="/">Back to login</a></p>
+</body>
+</html>'''
+    return create_html_response(content, status_code)
 
 
 def create_json_response(data, status_code=200):
@@ -619,87 +687,202 @@ def handle_login(event):
         }, 500)
 
 
-def handle_sso(event):
-    """Handle SSO request and generate SAML response"""
+def parse_authn_request(saml_request_b64):
+    """
+    Decode a base64/DEFLATE encoded AuthnRequest (HTTP-Redirect binding) and
+    extract its core fields. Falls back to plain base64 XML for HTTP-POST
+    binding requests.
+    """
+    raw = base64.b64decode(saml_request_b64)
     try:
-        body = event.get('body', '')
-        if event.get('isBase64Encoded'):
-            body = base64.b64decode(body).decode('utf-8')
+        xml_bytes = zlib.decompress(raw, -15)
+    except zlib.error:
+        xml_bytes = raw
+    
+    root = etree.fromstring(xml_bytes)
+    
+    protocol_ns = '{urn:oasis:names:tc:SAML:2.0:protocol}'
+    assertion_ns = '{urn:oasis:names:tc:SAML:2.0:assertion}'
+    
+    if root.tag != f'{protocol_ns}AuthnRequest':
+        raise ValueError('SAMLRequest is not an AuthnRequest')
+    
+    request_id = root.get('ID', '') or ''
+    acs_url = root.get('AssertionConsumerServiceURL', '') or ''
+    
+    issuer_element = root.find(f'{assertion_ns}Issuer')
+    issuer = issuer_element.text.strip() if issuer_element is not None and issuer_element.text else ''
+    
+    return request_id, acs_url, issuer
+
+
+def handle_sp_initiated_request(saml_request, relay_state=''):
+    """
+    Handle an SP-initiated AuthnRequest: validate it and redirect the browser
+    to the login page with the request context preserved in the URL fragment.
+    The context is later POSTed back to /sso together with the credentials.
+    """
+    try:
+        request_id, acs_url, issuer = parse_authn_request(saml_request)
+    except Exception as e:
+        print(f"Failed to parse AuthnRequest: {e}")
+        return create_error_html('Invalid SAML authentication request', 400)
+    
+    print(f"Received AuthnRequest{f' from issuer {issuer}' if issuer else ''}")
+    
+    if not VALID_REQUEST_ID.fullmatch(request_id):
+        return create_error_html('Invalid authentication request identifier', 400)
+    
+    if not acs_url.lower().startswith('https://'):
+        return create_error_html('Only HTTPS assertion consumer URLs are supported', 400)
+    
+    if not LOGIN_PAGE_URL or not LOGIN_PAGE_URL.startswith('http'):
+        return create_error_html('Login page URL is not configured', 500)
+    
+    context = {
+        'sp_acs': acs_url,
+        'in_response_to': request_id,
+        'relay_state': relay_state or ''
+    }
+    login_page = LOGIN_PAGE_URL.rstrip('/') + '/'
+    return {
+        'statusCode': 302,
+        'headers': {
+            'Location': f'{login_page}#{urlencode(context)}',
+            'Cache-Control': 'no-store'
+        },
+        'body': ''
+    }
+
+
+def handle_sso(event):
+    """
+    Handle SSO requests. Two flows are supported on this endpoint:
+    - SP-initiated: a request carrying a SAMLRequest parameter redirects the
+      browser to the login page with the request context.
+    - IdP-initiated / portal: a POST carrying username and role_arn generates
+      the signed SAML response for the selected role.
+    """
+    try:
+        params = {}
         
-        params = parse_qs(body)
-        username = params.get('username', [''])[0]
-        role_arn = params.get('role_arn', [''])[0]
-        acs_url = params.get('acs_url', [''])[0]
+        body = event.get('body', '')
+        if body:
+            if event.get('isBase64Encoded'):
+                body = base64.b64decode(body).decode('utf-8')
+            params.update(parse_qs(body, keep_blank_values=True))
+        
+        query_string_params = event.get('queryStringParameters') or {}
+        for key, value in query_string_params.items():
+            params.setdefault(key, [value])
+        
+        def get_param(name):
+            values = params.get(name, [''])
+            return values[0] if values else ''
+        
+        saml_request = get_param('SAMLRequest')
+        if saml_request:
+            return handle_sp_initiated_request(saml_request, get_param('RelayState'))
+        
+        username = get_param('username')
+        role_arn = get_param('role_arn')
+        acs_url = get_param('acs_url')
+        sp_acs_url = get_param('sp_acs')
+        in_response_to = get_param('in_response_to')
+        relay_state = get_param('relay_state')
         
         if not username or not role_arn:
-            return create_html_response(
-                '<html><body><h1>Error</h1><p>Invalid request parameters</p></body></html>',
-                400
+            return create_error_html('Invalid request parameters', 400)
+        
+        # Fetch role data for custom attributes, audience and NameID configuration
+        try:
+            table = dynamodb.Table(ROLES_TABLE)
+            response = table.get_item(
+                Key={
+                    'username': username,
+                    'role_arn': role_arn
+                }
             )
+            role_data = response.get('Item', {})
+        except Exception as e:
+            print(f"Error fetching role data: {e}")
+            role_data = {}
         
-        # If acs_url is not provided, fetch from DynamoDB (for backward compatibility)
         if not acs_url:
-            try:
-                table = dynamodb.Table(ROLES_TABLE)
-                response = table.get_item(
-                    Key={
-                        'username': username,
-                        'role_arn': role_arn
-                    }
-                )
-                
-                if 'Item' not in response:
-                    return create_html_response(
-                        '<html><body><h1>Error</h1><p>Role not found for user</p></body></html>',
-                        404
-                    )
-                
-                role_data = response['Item']
-                # Get ACS URL from role data, default to AWS Console if not specified
-                acs_url = role_data.get('acs_url', DEFAULT_ACS_URL)
-                
-            except Exception as e:
-                print(f"Error fetching role data: {e}")
-                return create_html_response(
-                    '<html><body><h1>Error</h1><p>Failed to retrieve role configuration</p></body></html>',
-                    500
-                )
-        else:
-            # If acs_url is provided, we still need to fetch role_data for custom attributes
-            try:
-                table = dynamodb.Table(ROLES_TABLE)
-                response = table.get_item(
-                    Key={
-                        'username': username,
-                        'role_arn': role_arn
-                    }
-                )
-                
-                if 'Item' in response:
-                    role_data = response['Item']
-                else:
-                    role_data = {}
-                    
-            except Exception as e:
-                print(f"Error fetching role data: {e}")
-                role_data = {}
+            # Fetch ACS URL from DynamoDB when not provided (backward compatibility)
+            if not role_data:
+                return create_error_html('Role not found for user', 404)
+            acs_url = role_data.get('acs_url', DEFAULT_ACS_URL)
         
-        # Extract custom attributes (those with 'attr_' prefix) from role_data
+        audience = role_data.get('audience') or DEFAULT_AUDIENCE
+        name_id_format = role_data.get('nameid_format') or DEFAULT_NAMEID_FORMAT
+        
+        # Resolve the NameID value: use the user's email when the configured
+        # format is an email address format
+        user = get_user(username) or {}
+        email = user.get('email') or role_data.get('attr_email') or ''
+        if 'emailaddress' in name_id_format.lower() and email:
+            name_id_value = email
+        else:
+            name_id_value = username
+        
         custom_attributes = {k: v for k, v in role_data.items() if k.startswith(ATTR_PREFIX)}
         
+        # Merge profile attributes from the user record for application roles;
+        # explicit role-level attributes take precedence. AWS roles keep their
+        # legacy behaviour (default Role/RoleSessionName/SessionDuration).
+        if user and not role_arn.startswith('arn:aws:'):
+            if email and 'attr_email' not in custom_attributes:
+                custom_attributes['attr_email'] = email
+            full_name = ' '.join(
+                part for part in (user.get('first_name', ''), user.get('last_name', '')) if part
+            )
+            if full_name and 'attr_display_name' not in custom_attributes and 'attr_name' not in custom_attributes:
+                custom_attributes['attr_display_name'] = full_name
+        
+        # SP-initiated validation: the response must be sent to the ACS requested
+        # by the service provider, using a role registered for that application
+        effective_acs_url = sp_acs_url or acs_url
+        if sp_acs_url:
+            stored_acs_url = role_data.get('acs_url') or acs_url
+            if stored_acs_url != sp_acs_url:
+                return create_error_html('Selected role is not authorized for this application', 403)
+        
+        if in_response_to and not VALID_REQUEST_ID.fullmatch(in_response_to):
+            return create_error_html('Invalid authentication request identifier', 400)
+        
+        if not effective_acs_url.lower().startswith('https://'):
+            return create_error_html('Only HTTPS assertion consumer URLs are supported', 400)
+        
         # Generate SAML response with the role's ACS URL and custom attributes
-        saml_response = generate_saml_response(username, role_arn, acs_url, custom_attributes=custom_attributes)
+        saml_response = generate_saml_response(
+            username,
+            role_arn,
+            effective_acs_url,
+            custom_attributes=custom_attributes,
+            audience=audience,
+            name_id=name_id_value,
+            name_id_format=name_id_format,
+            in_response_to=in_response_to or None
+        )
         saml_encoded = base64.b64encode(saml_response.encode('utf-8')).decode('utf-8')
         
+        relay_state_input = ''
+        if relay_state:
+            relay_state_input = (
+                f'<input type="hidden" name="RelayState" value="{html_utils.escape(relay_state, quote=True)}"/>'
+            )
+        
         # Create HTML auto-submit form
-        html = f'''<!DOCTYPE html>
+        html_content = f'''<!DOCTYPE html>
 <html>
 <head>
     <title>SAML SSO</title>
 </head>
 <body onload="document.forms[0].submit()">
-    <form method="POST" action="{acs_url}">
+    <form method="POST" action="{html_utils.escape(effective_acs_url, quote=True)}">
         <input type="hidden" name="SAMLResponse" value="{saml_encoded}"/>
+        {relay_state_input}
         <noscript>
             <p>JavaScript is disabled. Click the button below to continue.</p>
             <input type="submit" value="Continue"/>
@@ -709,14 +892,11 @@ def handle_sso(event):
 </body>
 </html>'''
         
-        return create_html_response(html)
+        return create_html_response(html_content)
         
     except Exception as e:
         print(f"SSO error: {e}")
-        return create_html_response(
-            '<html><body><h1>Error</h1><p>Failed to generate SAML response</p></body></html>',
-            500
-        )
+        return create_error_html('Failed to generate SAML response', 500)
 
 
 def handle_mfa_setup(event):
@@ -863,7 +1043,7 @@ def lambda_handler(event, context):
         return handle_metadata(event)
     elif method == 'POST' and path == '/login':
         return handle_login(event)
-    elif method == 'POST' and path == '/sso':
+    elif path == '/sso' and method in ('GET', 'POST'):
         return handle_sso(event)
     elif method == 'POST' and path == '/mfa/setup':
         return handle_mfa_setup(event)

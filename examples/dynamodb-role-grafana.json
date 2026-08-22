@@ -5,6 +5,8 @@
   "account_id": "",
   "description": "Grafana Cloud monitoring access",
   "acs_url": "https://mystack.grafana.net/saml/acs",
+  "audience": "https://mystack.grafana.net",
+  "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
   "attr_email": "jane.smith@example.com",
   "attr_display_name": "Jane Smith",
   "attr_name": "Jane Smith",

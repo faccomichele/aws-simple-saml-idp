@@ -105,7 +105,11 @@ For AWS Console access, you need to include AWS-specific attributes:
 
 ### Grafana Cloud Configuration
 
-For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure user profile attributes:
+For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure user profile attributes plus two role-level SP settings:
+
+- `acs_url`: Grafana's Assertion Consumer Service URL (`https://<stack>.grafana.net/saml/acs`)
+- `audience`: Grafana's SP Entity ID as shown in its SAML settings (used for `<saml:Audience>`; omit to keep `urn:amazon:webservices` for AWS)
+- `nameid_format`: NameID format URI. Use `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` so users are identified by email; when set, the user's `email` from the Users table is used as NameID value
 
 **DynamoDB Role Record:**
 ```json
@@ -116,6 +120,8 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
   "account_id": "",
   "description": "Grafana Cloud monitoring access",
   "acs_url": "https://mystack.grafana.net/saml/acs",
+  "audience": "https://mystack.grafana.net",
+  "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
   "attr_email": "jane.smith@example.com",
   "attr_display_name": "Jane Smith",
   "attr_name": "Jane Smith",
@@ -133,6 +139,8 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
     "role_arn": "grafana:viewer",
     "account_name": "Grafana Cloud",
     "acs_url": "https://mystack.grafana.net/saml/acs",
+    "audience": "https://mystack.grafana.net",
+    "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
     "attr_email": "jane.smith@example.com",
     "attr_display_name": "Jane Smith",

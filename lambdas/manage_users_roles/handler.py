@@ -287,6 +287,8 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
     - account_name: string (defaults to extracted account ID or empty)
     - acs_url: string (defaults to "https://signin.aws.amazon.com/saml")
     - description: string (defaults to "Role access for {username}")
+    - audience: string (SP entity ID used as SAML Audience; defaults to urn:amazon:webservices)
+    - nameid_format: string (NameID format URI; defaults to persistent format)
     - attr_*: any custom SAML attributes with 'attr_' prefix
     """
     try:
@@ -343,6 +345,12 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
             'created_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
         
+        # Optional SP configuration for non-AWS applications
+        if data.get('audience'):
+            item['audience'] = data['audience']
+        if data.get('nameid_format'):
+            item['nameid_format'] = data['nameid_format']
+        
         # Add any custom attributes with 'attr_' prefix from the input data
         for key, value in data.items():
             if key.startswith(ATTR_PREFIX):
@@ -374,6 +382,8 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
     - account_name: string
     - acs_url: string
     - description: string
+    - audience: string (SP entity ID used as SAML Audience)
+    - nameid_format: string (NameID format URI)
     """
     try:
         # Validate required fields
@@ -406,6 +416,8 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
         field_mappings = {
             'account_name': 'account_name',
             'acs_url': 'acs_url',
+            'audience': 'audience',
+            'nameid_format': 'nameid_format',
             'description': 'description'
         }
         

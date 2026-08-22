@@ -12,7 +12,7 @@ resource "aws_apigatewayv2_api" "saml" {
   }
 
   tags = {
-    Name = "${local.project_alias}-api-${local.environment}"
+    Name           = "${local.project_alias}-api-${local.environment}"
     RepositoryFile = "apigatewayv2.tf"
   }
 }
@@ -36,6 +36,12 @@ resource "aws_apigatewayv2_route" "metadata" {
 resource "aws_apigatewayv2_route" "sso" {
   api_id    = aws_apigatewayv2_api.saml.id
   route_key = "POST /sso"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "sso_get" {
+  api_id    = aws_apigatewayv2_api.saml.id
+  route_key = "GET /sso"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
@@ -84,7 +90,7 @@ resource "aws_apigatewayv2_stage" "saml" {
   }
 
   tags = {
-    Name = "${local.project_alias}-api-stage-${local.environment}"
+    Name           = "${local.project_alias}-api-stage-${local.environment}"
     RepositoryFile = "apigatewayv2.tf"
   }
 }

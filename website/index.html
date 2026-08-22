@@ -402,6 +402,20 @@
     <script>
         // Configuration - Update these values after deployment
         const API_BASE_URL = '__api_gateway_url__'; // Replace with actual API Gateway URL
+
+        // SP-initiated SSO context forwarded by the IdP backend via URL fragment
+        const spContext = (() => {
+            const params = new URLSearchParams(window.location.hash.substring(1));
+            const ctx = {
+                acs: params.get('sp_acs') || '',
+                inResponseTo: params.get('in_response_to') || '',
+                relayState: params.get('relay_state') || ''
+            };
+            if (ctx.acs) {
+                history.replaceState(null, '', window.location.pathname);
+            }
+            return ctx;
+        })();
         
         let currentUsername = '';
         let currentPassword = '';
@@ -662,6 +676,31 @@
                         acsUrlInput.name = 'acs_url';
                         acsUrlInput.value = selectedRole.acs_url || 'https://signin.aws.amazon.com/saml';
                         form.appendChild(acsUrlInput);
+
+                        if (spContext.acs) {
+                            // SP-initiated login: answer the ACS requested by the service provider
+                            const spAcsInput = document.createElement('input');
+                            spAcsInput.type = 'hidden';
+                            spAcsInput.name = 'sp_acs';
+                            spAcsInput.value = spContext.acs;
+                            form.appendChild(spAcsInput);
+
+                            if (spContext.inResponseTo) {
+                                const inResponseToInput = document.createElement('input');
+                                inResponseToInput.type = 'hidden';
+                                inResponseToInput.name = 'in_response_to';
+                                inResponseToInput.value = spContext.inResponseTo;
+                                form.appendChild(inResponseToInput);
+                            }
+
+                            if (spContext.relayState) {
+                                const relayStateInput = document.createElement('input');
+                                relayStateInput.type = 'hidden';
+                                relayStateInput.name = 'relay_state';
+                                relayStateInput.value = spContext.relayState;
+                                form.appendChild(relayStateInput);
+                            }
+                        }
 
                         document.body.appendChild(form);
                         form.submit();
