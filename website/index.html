@@ -153,13 +153,36 @@
         }
 
         .role-item {
+            position: relative;
             background: #f9fafb;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             padding: 16px;
+            padding-right: 44px;
             margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.2s;
+        }
+
+        .role-same-tab {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            appearance: none;
+            font-size: 11px;
+            line-height: 1;
+            color: #9ca3af;
+            background: transparent;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 3px 5px;
+            cursor: pointer;
+        }
+
+        .role-same-tab:hover {
+            color: #667eea;
+            border-color: #667eea;
         }
 
         .role-item:hover {
@@ -652,6 +675,66 @@
             }
         }
 
+        // Build and auto-submit the SSO form for a role.
+        // target: '_blank' (default, new tab) or '_self' (same page, debugging)
+        function submitSsoForm(role, target) {
+            try {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `${API_BASE_URL}/sso`;
+                form.target = target;
+
+                const usernameInput = document.createElement('input');
+                usernameInput.type = 'hidden';
+                usernameInput.name = 'username';
+                usernameInput.value = currentUsername;
+                form.appendChild(usernameInput);
+
+                const roleInput = document.createElement('input');
+                roleInput.type = 'hidden';
+                roleInput.name = 'role_arn';
+                roleInput.value = role.role_arn;
+                form.appendChild(roleInput);
+
+                const acsUrlInput = document.createElement('input');
+                acsUrlInput.type = 'hidden';
+                acsUrlInput.name = 'acs_url';
+                acsUrlInput.value = role.acs_url || 'https://signin.aws.amazon.com/saml';
+                form.appendChild(acsUrlInput);
+
+                if (spContext.acs) {
+                    // SP-initiated login: answer the ACS requested by the service provider
+                    const spAcsInput = document.createElement('input');
+                    spAcsInput.type = 'hidden';
+                    spAcsInput.name = 'sp_acs';
+                    spAcsInput.value = spContext.acs;
+                    form.appendChild(spAcsInput);
+
+                    if (spContext.inResponseTo) {
+                        const inResponseToInput = document.createElement('input');
+                        inResponseToInput.type = 'hidden';
+                        inResponseToInput.name = 'in_response_to';
+                        inResponseToInput.value = spContext.inResponseTo;
+                        form.appendChild(inResponseToInput);
+                    }
+
+                    if (spContext.relayState) {
+                        const relayStateInput = document.createElement('input');
+                        relayStateInput.type = 'hidden';
+                        relayStateInput.name = 'relay_state';
+                        relayStateInput.value = spContext.relayState;
+                        form.appendChild(relayStateInput);
+                    }
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            } catch (err) {
+                console.error('Auto SSO submit error:', err);
+            }
+        }
+
         // Show role selection screen, grouped by role groups
         function showRoleSelection(roles) {
             roleList.innerHTML = '';
@@ -689,65 +772,24 @@
                         });
                         roleItem.classList.add('selected');
                         selectedRole = role;
-                        // Automatically continue to SSO when a role is selected
-                        // Create and submit the SSO form immediately (no extra confirmation)
-                        try {
-                            const form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = `${API_BASE_URL}/sso`;
-                            form.target = '_blank';
-
-                            const usernameInput = document.createElement('input');
-                            usernameInput.type = 'hidden';
-                            usernameInput.name = 'username';
-                            usernameInput.value = currentUsername;
-                            form.appendChild(usernameInput);
-
-                            const roleInput = document.createElement('input');
-                            roleInput.type = 'hidden';
-                            roleInput.name = 'role_arn';
-                            roleInput.value = selectedRole.role_arn;
-                            form.appendChild(roleInput);
-
-                            const acsUrlInput = document.createElement('input');
-                            acsUrlInput.type = 'hidden';
-                            acsUrlInput.name = 'acs_url';
-                            acsUrlInput.value = selectedRole.acs_url || 'https://signin.aws.amazon.com/saml';
-                            form.appendChild(acsUrlInput);
-
-                            if (spContext.acs) {
-                                // SP-initiated login: answer the ACS requested by the service provider
-                                const spAcsInput = document.createElement('input');
-                                spAcsInput.type = 'hidden';
-                                spAcsInput.name = 'sp_acs';
-                                spAcsInput.value = spContext.acs;
-                                form.appendChild(spAcsInput);
-
-                                if (spContext.inResponseTo) {
-                                    const inResponseToInput = document.createElement('input');
-                                    inResponseToInput.type = 'hidden';
-                                    inResponseToInput.name = 'in_response_to';
-                                    inResponseToInput.value = spContext.inResponseTo;
-                                    form.appendChild(inResponseToInput);
-                                }
-
-                                if (spContext.relayState) {
-                                    const relayStateInput = document.createElement('input');
-                                    relayStateInput.type = 'hidden';
-                                    relayStateInput.name = 'relay_state';
-                                    relayStateInput.value = spContext.relayState;
-                                    form.appendChild(relayStateInput);
-                                }
-                            }
-
-                            document.body.appendChild(form);
-                            form.submit();
-                            document.body.removeChild(form);
-                        } catch (err) {
-                            console.error('Auto SSO submit error:', err);
-                        }
+                        // Automatically continue to SSO in a new tab when a role is selected
+                        submitSsoForm(role, '_blank');
                     });
-                    
+
+                    // Tiny debug control: submit the SSO form in the same tab
+                    const sameTabButton = document.createElement('button');
+                    sameTabButton.type = 'button';
+                    sameTabButton.className = 'role-same-tab';
+                    sameTabButton.textContent = '→';
+                    sameTabButton.title = 'Open in this tab (debug)';
+                    sameTabButton.setAttribute('aria-label', 'Open in this tab (debug)');
+                    sameTabButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        submitSsoForm(role, '_self');
+                    });
+                    roleItem.appendChild(sameTabButton);
+
                     roleList.appendChild(roleItem);
                 });
             });
