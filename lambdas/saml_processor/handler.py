@@ -830,6 +830,13 @@ def handle_sso(event):
         audience = role_data.get('audience') or DEFAULT_AUDIENCE
         name_id_format = role_data.get('nameid_format') or DEFAULT_NAMEID_FORMAT
         
+        # RelayState resolution: a request-provided value (SP-initiated passthrough)
+        # always wins; otherwise use the role-record value for IdP-initiated logins.
+        # The value is used verbatim - trailing spaces are significant because
+        # providers like Grafana compare RelayState byte-for-byte.
+        if not relay_state:
+            relay_state = str(role_data.get('relay_state') or '')
+        
         # Resolve the NameID value: use the user's email when the configured
         # format is an email address format
         user = get_user(username) or {}

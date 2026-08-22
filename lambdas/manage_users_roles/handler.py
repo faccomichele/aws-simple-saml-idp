@@ -290,6 +290,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
     - audience: string (SP entity ID used as SAML Audience; defaults to urn:amazon:webservices)
     - nameid_format: string (NameID format URI; defaults to persistent format)
     - groups: comma-separated string (SAML groups attribute + portal grouping)
+    - relay_state: string echoed on IdP-initiated logins (must match the SP's configured value byte-for-byte, including trailing spaces)
     - attr_*: any custom SAML attributes with 'attr_' prefix
     """
     try:
@@ -353,6 +354,8 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
             item['nameid_format'] = data['nameid_format']
         if data.get('groups'):
             item['groups'] = data['groups']
+        if data.get('relay_state'):
+            item['relay_state'] = data['relay_state']
         
         # Add any custom attributes with 'attr_' prefix from the input data
         for key, value in data.items():
@@ -388,6 +391,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
     - audience: string (SP entity ID used as SAML Audience)
     - nameid_format: string (NameID format URI)
     - groups: comma-separated string (SAML groups attribute + portal grouping)
+    - relay_state: string echoed on IdP-initiated logins
     """
     try:
         # Validate required fields
@@ -423,6 +427,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
             'audience': 'audience',
             'nameid_format': 'nameid_format',
             'groups': 'groups',
+            'relay_state': 'relay_state',
             'description': 'description'
         }
         

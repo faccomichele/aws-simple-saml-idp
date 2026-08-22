@@ -133,6 +133,7 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
 - `acs_url`: Grafana's Assertion Consumer Service URL (`https://<stack>.grafana.net/saml/acs`)
 - `audience`: Grafana's SP Entity ID as shown in its SAML settings (used for `<saml:Audience>`; omit to keep `urn:amazon:webservices` for AWS)
 - `nameid_format`: NameID format URI. Use `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` so users are identified by email; when set, the user's `email` from the Users table is used as NameID value
+- `relay_state`: RelayState echoed in the auto-submit form on IdP-initiated logins. Grafana Cloud requires this field and compares it **byte-for-byte** with its own Relay State setting (including trailing spaces). SP-initiated logins always echo the RelayState from the AuthnRequest instead; store the DynamoDB value verbatim (beware editors/scripts trimming whitespace)
 
 **DynamoDB Role Record:**
 ```json
@@ -146,6 +147,7 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
   "audience": "https://mystack.grafana.net",
   "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
   "groups": "Grafana",
+  "relay_state": "unified-sso-portal",
   "attr_email": "jane.smith@example.com",
   "attr_display_name": "Jane Smith",
   "attr_name": "Jane Smith",
@@ -166,6 +168,7 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
     "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
     "groups": "Grafana",
+    "relay_state": "unified-sso-portal",
     "attr_email": "jane.smith@example.com",
     "attr_display_name": "Jane Smith",
     "attr_name": "Jane Smith",

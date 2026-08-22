@@ -226,7 +226,10 @@ GET {ApiGW}/sso?SAMLRequest=<deflated+base64>&RelayState=<state>
    auto-submit form.
 
 IdP-initiated logins (portal without SP context) work exactly as before; Grafana accepts them when
-"Identity Provider Initiated Login" is enabled in its SAML settings.
+"Identity Provider Initiated Login" is enabled in its SAML settings. When the role record defines a
+`relay_state`, it is included in unsolicited responses so providers that require a matching Relay
+State (e.g., Grafana Cloud, which compares byte-for-byte including trailing spaces) accept the login.
+SP-initiated logins always echo the RelayState from the original AuthnRequest instead.
 
 ## SAML Assertion Structure
 

@@ -9,6 +9,7 @@
     "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
     "groups": "Grafana",
+    "relay_state": "unified-sso-portal",
     "attr_email": "jane.smith@example.com",
     "attr_display_name": "Jane Smith",
     "attr_name": "Jane Smith"
