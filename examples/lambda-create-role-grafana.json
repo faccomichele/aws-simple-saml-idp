@@ -5,7 +5,7 @@
     "role_arn": "grafana:viewer",
     "account_name": "Grafana Cloud",
     "acs_url": "https://mystack.grafana.net/saml/acs",
-    "audience": "https://mystack.grafana.net",
+    "audience": "https://mystack.grafana.net/saml/metadata",
     "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
     "groups": "Grafana",

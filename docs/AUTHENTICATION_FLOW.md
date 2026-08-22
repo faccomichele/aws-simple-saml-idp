@@ -153,8 +153,8 @@ The Simple SAML IdP implements a standard SAML 2.0 authentication flow designed 
 
 7. **Grouped role panel**: The Unified SSO Portal renders the roles grouped by the first
    value of each role's `groups` field, with a highlighted sticky header per group inside
-   a scrollable panel (roles without a group fall under "Other"). All group values are also
-   emitted as the multi-valued SAML `groups` attribute during assertion generation.
+   a scrollable panel (roles without a group fall under "Other"). Groups are used for
+   portal display only and are never emitted as SAML attributes.
 
 ### Step 9-14: Role Selection and SAML Generation
 

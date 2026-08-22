@@ -146,7 +146,7 @@ def generate_saml_metadata():
 
 def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION_DURATION,
                            custom_attributes=None, audience=None, name_id=None,
-                           name_id_format=None, in_response_to=None, groups=None):
+                           name_id_format=None, in_response_to=None):
     """
     Generate SAML Response for SAML-enabled applications
     
@@ -163,7 +163,6 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
         name_id: Value used for the NameID element; defaults to username
         name_id_format: NameID format URI; defaults to the persistent format
         in_response_to: AuthnRequest ID when answering an SP-initiated login
-        groups: Comma-separated group list emitted as a multi-valued 'groups' attribute
     """
     now = datetime.utcnow()
     not_before = now - timedelta(minutes=5)
@@ -217,10 +216,16 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
     
     # Build AttributeStatement dynamically based on custom_attributes
     attributes_xml = []
+    saml_attributes = dict(custom_attributes or {})
+
+    if role_arn and not role_arn.startswith('arn:aws:iam::') and 'attr_role' not in saml_attributes:
+        role_value = role_arn.rsplit(':', 1)[-1]
+        if role_value:
+            saml_attributes['attr_role'] = role_value
     
     # Process custom attributes with 'attr_' prefix
-    if custom_attributes:
-        for key, value in custom_attributes.items():
+    if saml_attributes:
+        for key, value in saml_attributes.items():
             if key.startswith(ATTR_PREFIX):
                 # Check if we have a mapping for this attribute
                 if key in ATTRIBUTE_MAPPING:
@@ -244,7 +249,7 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
                     attr_xml = f'''      <saml:Attribute Name="{attr_name}">
         <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                           xsi:type="xs:string">{attr_value}</saml:AttributeValue>
+                           xsi:type="xs:string">{xml_escape(attr_value)}</saml:AttributeValue>
       </saml:Attribute>'''
                     attributes_xml.append(attr_xml)
                 else:
@@ -254,7 +259,7 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
                     attr_xml = f'''      <saml:Attribute Name="{attr_name}">
         <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                           xsi:type="xs:string">{attr_value}</saml:AttributeValue>
+                           xsi:type="xs:string">{xml_escape(attr_value)}</saml:AttributeValue>
       </saml:Attribute>'''
                     attributes_xml.append(attr_xml)
     
@@ -274,17 +279,6 @@ def generate_saml_response(username, role_arn, acs_url, session_duration=SESSION
         <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                            xsi:type="xs:string">{session_duration}</saml:AttributeValue>
-      </saml:Attribute>''')
-    
-    # Emit a multi-valued groups attribute when configured on the role record
-    if groups:
-        group_values = [g.strip() for g in str(groups).split(',') if g.strip()]
-        if group_values:
-            values_xml = '\n'.join(f'''        <saml:AttributeValue xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                           xsi:type="xs:string">{xml_escape(v)}</saml:AttributeValue>''' for v in group_values)
-            attributes_xml.append(f'''      <saml:Attribute Name="groups">
-{values_xml}
       </saml:Attribute>''')
     
     # Join all attributes
@@ -848,11 +842,9 @@ def handle_sso(event):
         
         custom_attributes = {k: v for k, v in role_data.items() if k.startswith(ATTR_PREFIX)}
         
-        # Role-level groups (comma-separated) drive the SAML groups attribute and
-        # portal grouping; they supersede the legacy attr_groups mapping
-        role_groups = str(role_data.get('groups') or '').strip()
-        if role_groups:
-            custom_attributes.pop('attr_groups', None)
+        # Groups are used for portal grouping only and are never emitted via SAML;
+        # strip any legacy attr_groups attribute as well
+        custom_attributes.pop('attr_groups', None)
         
         # Merge profile attributes from the user record for application roles;
         # explicit role-level attributes take precedence. AWS roles keep their
@@ -889,8 +881,7 @@ def handle_sso(event):
             audience=audience,
             name_id=name_id_value,
             name_id_format=name_id_format,
-            in_response_to=in_response_to or None,
-            groups=role_groups or None
+            in_response_to=in_response_to or None
         )
         saml_encoded = base64.b64encode(saml_response.encode('utf-8')).decode('utf-8')
         

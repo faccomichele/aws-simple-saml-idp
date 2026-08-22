@@ -29,7 +29,7 @@ locals {
     attr_surname                 = "surname"
     attr_display_name            = "displayName"
     attr_uid                     = "uid"
-    attr_groups                  = "groups"
+    attr_role                    = "role"
   }
 }
 ```
@@ -47,23 +47,22 @@ The following short attribute names (stored in DynamoDB) are automatically mappe
 | `attr_surname` | `surname` |
 | `attr_display_name` | `displayName` |
 | `attr_uid` | `uid` |
-| `attr_groups` | `groups` |
+| `attr_role` | `role` |
 
 You can also add custom attributes not in this table - they will be included with their name (without the `attr_` prefix).
 
 ## Role Groups Field
 
 Role records support an optional `groups` field: a comma-separated string of group names
-(e.g., `"Grafana"` or `"AWS Production, Billing"`). It serves two purposes:
+(e.g., `"Grafana"` or `"AWS Production, Billing"`).
 
-1. **SAML attribute**: all values are emitted as a multi-valued `groups` attribute in the
-   assertion for both AWS and Grafana logins. Grafana can map these values via its
-   `org_mapping` / `allowed_organizations` settings; AWS ignores unknown attributes.
-2. **Portal grouping**: the first value is used as the section header in the Unified SSO
-   Portal role panel (roles without a group fall under "Other").
+It is used for **portal grouping only**: the first value is used as the section header in the
+Unified SSO Portal role panel (roles without a group fall under "Other").
 
-Do not combine the `groups` field with the legacy `attr_groups` custom attribute — when
-`groups` is present it takes precedence and `attr_groups` is ignored.
+Groups are **never emitted via SAML** - no `groups` attribute is added to assertions for AWS,
+Grafana or any other application. The legacy `attr_groups` custom attribute is stripped as well,
+so neither field can leak into an assertion. Assign Grafana roles inside Grafana (or via its own
+`org_mapping` fed by other attributes) instead.
 
 **DynamoDB / Lambda payload example:**
 ```json
@@ -128,12 +127,14 @@ For AWS Console access, you need to include AWS-specific attributes:
 
 ### Grafana Cloud Configuration
 
-For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure user profile attributes plus two role-level SP settings:
+For Grafana Cloud, you don't need AWS-specific attributes. Keep `role_arn` as the non-empty role-record identifier, and the IdP automatically emits the final segment of that value as the SAML `role` attribute. For example, `grafana:viewer` remains the DynamoDB and portal identifier but emits `role=viewer` to Grafana. Configure the role-level SP settings and user profile attributes below:
 
 - `acs_url`: Grafana's Assertion Consumer Service URL (`https://<stack>.grafana.net/saml/acs`)
-- `audience`: Grafana's SP Entity ID as shown in its SAML settings (used for `<saml:Audience>`; omit to keep `urn:amazon:webservices` for AWS)
+- `audience`: must equal Grafana's **SP Entity ID** exactly. Grafana Cloud defaults its Entity ID to its metadata URL (`https://<stack>.grafana.net/saml/metadata` — shown as "SP metadata URL / SP Entity ID" in the SAML settings), so use that full string, not the bare stack domain. A mismatch here causes "Login provider denied login request". Omit to keep `urn:amazon:webservices` for AWS roles
 - `nameid_format`: NameID format URI. Use `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` so users are identified by email; when set, the user's `email` from the Users table is used as NameID value
 - `relay_state`: RelayState echoed in the auto-submit form on IdP-initiated logins. Grafana Cloud requires this field and compares it **byte-for-byte** with its own Relay State setting (including trailing spaces). SP-initiated logins always echo the RelayState from the AuthnRequest instead; store the DynamoDB value verbatim (beware editors/scripts trimming whitespace)
+- `role_arn`: required non-empty internal identifier, such as `grafana:viewer`; it is not emitted as a `role_arn` SAML attribute
+- `attr_role`: optional explicit SAML role override. If omitted, the final segment of `role_arn` is used automatically
 
 **DynamoDB Role Record:**
 ```json
@@ -144,7 +145,7 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
   "account_id": "",
   "description": "Grafana Cloud monitoring access",
   "acs_url": "https://mystack.grafana.net/saml/acs",
-  "audience": "https://mystack.grafana.net",
+  "audience": "https://mystack.grafana.net/saml/metadata",
   "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
   "groups": "Grafana",
   "relay_state": "unified-sso-portal",
@@ -164,15 +165,14 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
     "role_arn": "grafana:viewer",
     "account_name": "Grafana Cloud",
     "acs_url": "https://mystack.grafana.net/saml/acs",
-    "audience": "https://mystack.grafana.net",
+    "audience": "https://mystack.grafana.net/saml/metadata",
     "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
     "groups": "Grafana",
     "relay_state": "unified-sso-portal",
     "attr_email": "jane.smith@example.com",
     "attr_display_name": "Jane Smith",
-    "attr_name": "Jane Smith",
-    "attr_groups": "Editors"
+    "attr_name": "Jane Smith"
   }
 }
 ```
@@ -188,10 +188,13 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
 <saml:Attribute Name="name">
   <saml:AttributeValue>Jane Smith</saml:AttributeValue>
 </saml:Attribute>
-<saml:Attribute Name="groups">
-  <saml:AttributeValue>Grafana</saml:AttributeValue>
+<saml:Attribute Name="role">
+  <saml:AttributeValue>viewer</saml:AttributeValue>
 </saml:Attribute>
 ```
+
+Note: the `groups` field is deliberately absent from assertions - it is used for portal
+grouping only.
 
 ## Important Notes
 
@@ -203,6 +206,8 @@ For non-AWS applications like Grafana Cloud, you still need to provide a `role_a
 - `grafana:editor` - Grafana editor role
 - `grafana:admin` - Grafana admin role
 - `app:role_name` - Any custom application with role name
+
+For non-AWS role identifiers, the final colon-separated segment is emitted as the SAML `role` attribute. For example, `grafana:viewer` emits `role=viewer`. Add `attr_role` only when the SAML role value should differ from that derived value.
 
 ### Backward Compatibility
 

@@ -270,9 +270,14 @@ aws lambda invoke \
   response.json
 
 # Or manually add to DynamoDB with attributes like:
-# - attr_email: user email
-# - attr_display_name: user's display name
-# - attr_groups: Grafana role (Viewer, Editor, Admin)
+# - role_arn: required internal identifier (e.g. "grafana:viewer"); final segment becomes SAML role
+# - acs_url: https://YOUR-STACK.grafana.net/saml/acs
+# - audience: SP Entity ID (defaults to https://YOUR-STACK.grafana.net/saml/metadata)
+# - nameid_format: urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
+# - groups: portal grouping only - never sent via SAML
+# - relay_state: must match Grafana's Relay State setting byte-for-byte
+# - attr_email / attr_display_name / attr_name: user profile attributes
+# - attr_role: optional SAML role override; otherwise role_arn's final segment is used
 ```
 
 See [CUSTOM_ATTRIBUTES.md](docs/CUSTOM_ATTRIBUTES.md) for detailed Grafana configuration examples.
