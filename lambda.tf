@@ -4,7 +4,7 @@ resource "aws_lambda_layer_version" "saml_processor_dependencies" {
   layer_name               = "${local.project_alias}-sp-dependencies-${local.environment}"
   compatible_runtimes      = [local.python_runtime]
   source_code_hash         = filebase64sha256("${path.module}/lambdas/saml_processor-layer.zip")
-  compatible_architectures = ["x86_64", "arm64"]
+  compatible_architectures = ["arm64"]
   description              = "Required dependencies"
 }
 
@@ -18,7 +18,7 @@ resource "aws_lambda_function" "saml_processor" {
   runtime          = local.python_runtime
   timeout          = 30
   memory_size      = 512
-  architectures    = ["x86_64"]
+  architectures    = ["arm64"]
 
   layers = [aws_lambda_layer_version.saml_processor_dependencies.arn]
 
@@ -34,11 +34,12 @@ resource "aws_lambda_function" "saml_processor" {
       ALLOWED_AWS_ACCOUNTS = jsonencode(var.allowed_aws_accounts)
       SAML_PROVIDER_NAME   = "${var.saml_provider_name}-${local.environment}"
       ATTRIBUTE_MAPPING    = jsonencode(local.attribute_mapping)
+      LOGIN_PAGE_URL       = "https://${aws_cloudfront_distribution.login_page.domain_name}"
     }
   }
 
   tags = {
-    Name = "${local.project_alias}-processor-${local.environment}"
+    Name           = "${local.project_alias}-processor-${local.environment}"
     RepositoryFile = "lambda.tf"
   }
 }
@@ -58,7 +59,7 @@ resource "aws_lambda_layer_version" "manage_users_roles_dependencies" {
   layer_name               = "${local.project_alias}-mur-dependencies-${local.environment}"
   compatible_runtimes      = [local.python_runtime]
   source_code_hash         = filebase64sha256("${path.module}/lambdas/manage_users_roles-layer.zip")
-  compatible_architectures = ["x86_64", "arm64"]
+  compatible_architectures = ["arm64"]
   description              = "Required dependencies"
 }
 
@@ -72,7 +73,7 @@ resource "aws_lambda_function" "manage_users_roles" {
   runtime          = local.python_runtime
   timeout          = 30
   memory_size      = 256
-  architectures    = ["x86_64"]
+  architectures    = ["arm64"]
 
   layers = [aws_lambda_layer_version.manage_users_roles_dependencies.arn]
 
@@ -85,7 +86,7 @@ resource "aws_lambda_function" "manage_users_roles" {
   }
 
   tags = {
-    Name = "${local.project_alias}-manage-users-roles-${local.environment}"
+    Name           = "${local.project_alias}-manage-users-roles-${local.environment}"
     RepositoryFile = "lambda.tf"
   }
 }

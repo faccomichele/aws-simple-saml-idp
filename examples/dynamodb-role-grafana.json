@@ -5,9 +5,12 @@
   "account_id": "",
   "description": "Grafana Cloud monitoring access",
   "acs_url": "https://mystack.grafana.net/saml/acs",
+  "audience": "https://mystack.grafana.net/saml/metadata",
+  "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+  "groups": "Grafana",
+  "relay_state": "unified-sso-portal",
   "attr_email": "jane.smith@example.com",
   "attr_display_name": "Jane Smith",
   "attr_name": "Jane Smith",
-  "attr_groups": "Editors",
   "created_at": "2024-01-08T00:00:00Z"
 }

@@ -132,14 +132,57 @@
             padding: 4px;
         }
 
+        .role-group-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 8px 14px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.35);
+            margin: 18px 0 10px 0;
+        }
+
+        .role-group-header:first-child {
+            margin-top: 4px;
+        }
+
         .role-item {
+            position: relative;
             background: #f9fafb;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             padding: 16px;
+            padding-right: 44px;
             margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.2s;
+        }
+
+        .role-same-tab {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            appearance: none;
+            font-size: 11px;
+            line-height: 1;
+            color: #9ca3af;
+            background: transparent;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 3px 5px;
+            cursor: pointer;
+        }
+
+        .role-same-tab:hover {
+            color: #667eea;
+            border-color: #667eea;
         }
 
         .role-item:hover {
@@ -299,7 +342,7 @@
 <body>
     <div class="container">
         <div class="logo">
-            <h1>AWS Console SSO</h1>
+            <h1>Unified SSO Portal</h1>
             <p>Central SAML Identity Provider</p>
         </div>
 
@@ -323,9 +366,9 @@
 
         <!-- Role Selection -->
         <div id="roleSelection" class="role-selection">
-            <h2 style="color: #374151; font-size: 20px; margin-bottom: 10px;">Select AWS Role</h2>
+            <h2 style="color: #374151; font-size: 20px; margin-bottom: 10px;">Select a Role</h2>
             <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
-                Choose the AWS account and role you want to access:
+                Choose the account or application you want to access:
             </p>
             <div id="roleList" class="role-list"></div>
             <div class="back-link">
@@ -402,6 +445,20 @@
     <script>
         // Configuration - Update these values after deployment
         const API_BASE_URL = '__api_gateway_url__'; // Replace with actual API Gateway URL
+
+        // SP-initiated SSO context forwarded by the IdP backend via URL fragment
+        const spContext = (() => {
+            const params = new URLSearchParams(window.location.hash.substring(1));
+            const ctx = {
+                acs: params.get('sp_acs') || '',
+                inResponseTo: params.get('in_response_to') || '',
+                relayState: params.get('relay_state') || ''
+            };
+            if (ctx.acs) {
+                history.replaceState(null, '', window.location.pathname);
+            }
+            return ctx;
+        })();
         
         let currentUsername = '';
         let currentPassword = '';
@@ -618,60 +675,123 @@
             }
         }
 
-        // Show role selection screen
+        // Build and auto-submit the SSO form for a role.
+        // target: '_blank' (default, new tab) or '_self' (same page, debugging)
+        function submitSsoForm(role, target) {
+            try {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `${API_BASE_URL}/sso`;
+                form.target = target;
+
+                const usernameInput = document.createElement('input');
+                usernameInput.type = 'hidden';
+                usernameInput.name = 'username';
+                usernameInput.value = currentUsername;
+                form.appendChild(usernameInput);
+
+                const roleInput = document.createElement('input');
+                roleInput.type = 'hidden';
+                roleInput.name = 'role_arn';
+                roleInput.value = role.role_arn;
+                form.appendChild(roleInput);
+
+                const acsUrlInput = document.createElement('input');
+                acsUrlInput.type = 'hidden';
+                acsUrlInput.name = 'acs_url';
+                acsUrlInput.value = role.acs_url || 'https://signin.aws.amazon.com/saml';
+                form.appendChild(acsUrlInput);
+
+                if (spContext.acs) {
+                    // SP-initiated login: answer the ACS requested by the service provider
+                    const spAcsInput = document.createElement('input');
+                    spAcsInput.type = 'hidden';
+                    spAcsInput.name = 'sp_acs';
+                    spAcsInput.value = spContext.acs;
+                    form.appendChild(spAcsInput);
+
+                    if (spContext.inResponseTo) {
+                        const inResponseToInput = document.createElement('input');
+                        inResponseToInput.type = 'hidden';
+                        inResponseToInput.name = 'in_response_to';
+                        inResponseToInput.value = spContext.inResponseTo;
+                        form.appendChild(inResponseToInput);
+                    }
+
+                    if (spContext.relayState) {
+                        const relayStateInput = document.createElement('input');
+                        relayStateInput.type = 'hidden';
+                        relayStateInput.name = 'relay_state';
+                        relayStateInput.value = spContext.relayState;
+                        form.appendChild(relayStateInput);
+                    }
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            } catch (err) {
+                console.error('Auto SSO submit error:', err);
+            }
+        }
+
+        // Show role selection screen, grouped by role groups
         function showRoleSelection(roles) {
             roleList.innerHTML = '';
-            
+
+            const groups = new Map();
             roles.forEach(role => {
-                const roleItem = document.createElement('div');
-                roleItem.className = 'role-item';
-                roleItem.innerHTML = `
-                    <div class="role-account">${role.account_name || 'AWS Account'} (${role.account_id})</div>
-                    <div class="role-name">${role.role_name}</div>
-                    ${role.description ? `<div class="role-description">${role.description}</div>` : ''}
-                `;
-                
-                roleItem.addEventListener('click', () => {
-                    document.querySelectorAll('.role-item').forEach(item => {
-                        item.classList.remove('selected');
+                const groupValues = Array.isArray(role.groups) ? role.groups : [];
+                const groupName = (groupValues.length > 0 && String(groupValues[0]).trim())
+                    ? String(groupValues[0]).trim()
+                    : 'Other';
+                if (!groups.has(groupName)) {
+                    groups.set(groupName, []);
+                }
+                groups.get(groupName).push(role);
+            });
+
+            groups.forEach((groupRoles, groupName) => {
+                const header = document.createElement('div');
+                header.className = 'role-group-header';
+                header.textContent = groupName;
+                roleList.appendChild(header);
+
+                groupRoles.forEach(role => {
+                    const roleItem = document.createElement('div');
+                    roleItem.className = 'role-item';
+                    roleItem.innerHTML = `
+                        <div class="role-account">${role.account_name || 'Account'} (${role.account_id})</div>
+                        <div class="role-name">${role.role_name}</div>
+                        ${role.description ? `<div class="role-description">${role.description}</div>` : ''}
+                    `;
+                    
+                    roleItem.addEventListener('click', () => {
+                        document.querySelectorAll('.role-item').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+                        roleItem.classList.add('selected');
+                        selectedRole = role;
+                        // Automatically continue to SSO in a new tab when a role is selected
+                        submitSsoForm(role, '_blank');
                     });
-                    roleItem.classList.add('selected');
-                    selectedRole = role;
-                    // Automatically continue to SSO when a role is selected
-                    // Create and submit the SSO form immediately (no extra confirmation)
-                    try {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = `${API_BASE_URL}/sso`;
-                        form.target = '_blank';
 
-                        const usernameInput = document.createElement('input');
-                        usernameInput.type = 'hidden';
-                        usernameInput.name = 'username';
-                        usernameInput.value = currentUsername;
-                        form.appendChild(usernameInput);
+                    // Tiny debug control: submit the SSO form in the same tab
+                    const sameTabButton = document.createElement('button');
+                    sameTabButton.type = 'button';
+                    sameTabButton.className = 'role-same-tab';
+                    sameTabButton.textContent = '→';
+                    sameTabButton.title = 'Open in this tab (debug)';
+                    sameTabButton.setAttribute('aria-label', 'Open in this tab (debug)');
+                    sameTabButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        submitSsoForm(role, '_self');
+                    });
+                    roleItem.appendChild(sameTabButton);
 
-                        const roleInput = document.createElement('input');
-                        roleInput.type = 'hidden';
-                        roleInput.name = 'role_arn';
-                        roleInput.value = selectedRole.role_arn;
-                        form.appendChild(roleInput);
-
-                        const acsUrlInput = document.createElement('input');
-                        acsUrlInput.type = 'hidden';
-                        acsUrlInput.name = 'acs_url';
-                        acsUrlInput.value = selectedRole.acs_url || 'https://signin.aws.amazon.com/saml';
-                        form.appendChild(acsUrlInput);
-
-                        document.body.appendChild(form);
-                        form.submit();
-                        document.body.removeChild(form);
-                    } catch (err) {
-                        console.error('Auto SSO submit error:', err);
-                    }
+                    roleList.appendChild(roleItem);
                 });
-                
-                roleList.appendChild(roleItem);
             });
 
             hideAllScreens();
