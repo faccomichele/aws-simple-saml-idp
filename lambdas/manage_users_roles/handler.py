@@ -289,6 +289,7 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
     - description: string (defaults to "Role access for {username}")
     - audience: string (SP entity ID used as SAML Audience; defaults to urn:amazon:webservices)
     - nameid_format: string (NameID format URI; defaults to persistent format)
+    - groups: comma-separated string (SAML groups attribute + portal grouping)
     - attr_*: any custom SAML attributes with 'attr_' prefix
     """
     try:
@@ -350,6 +351,8 @@ def create_role(data: Dict[str, Any]) -> Dict[str, Any]:
             item['audience'] = data['audience']
         if data.get('nameid_format'):
             item['nameid_format'] = data['nameid_format']
+        if data.get('groups'):
+            item['groups'] = data['groups']
         
         # Add any custom attributes with 'attr_' prefix from the input data
         for key, value in data.items():
@@ -384,6 +387,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
     - description: string
     - audience: string (SP entity ID used as SAML Audience)
     - nameid_format: string (NameID format URI)
+    - groups: comma-separated string (SAML groups attribute + portal grouping)
     """
     try:
         # Validate required fields
@@ -418,6 +422,7 @@ def update_role(data: Dict[str, Any]) -> Dict[str, Any]:
             'acs_url': 'acs_url',
             'audience': 'audience',
             'nameid_format': 'nameid_format',
+            'groups': 'groups',
             'description': 'description'
         }
         

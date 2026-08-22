@@ -6,6 +6,7 @@
     "account_name": "Production Account",
     "acs_url": "https://signin.aws.amazon.com/saml",
     "description": "Full administrator access to production resources",
+    "groups": "AWS Production",
     "attr_aws_role": "true",
     "attr_aws_role_session_name": "true",
     "attr_aws_session_duration": "43200"

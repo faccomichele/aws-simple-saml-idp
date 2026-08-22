@@ -144,11 +144,17 @@ The Simple SAML IdP implements a standard SAML 2.0 authentication flow designed 
          "account_id": "123456789012",
          "role_name": "AdminRole",
          "account_name": "Production Account",
-         "description": "Full admin access"
+         "description": "Full admin access",
+         "groups": ["AWS Production"]
        }
      ]
    }
    ```
+
+7. **Grouped role panel**: The Unified SSO Portal renders the roles grouped by the first
+   value of each role's `groups` field, with a highlighted sticky header per group inside
+   a scrollable panel (roles without a group fall under "Other"). All group values are also
+   emitted as the multi-valued SAML `groups` attribute during assertion generation.
 
 ### Step 9-14: Role Selection and SAML Generation
 

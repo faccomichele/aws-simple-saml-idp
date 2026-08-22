@@ -51,6 +51,29 @@ The following short attribute names (stored in DynamoDB) are automatically mappe
 
 You can also add custom attributes not in this table - they will be included with their name (without the `attr_` prefix).
 
+## Role Groups Field
+
+Role records support an optional `groups` field: a comma-separated string of group names
+(e.g., `"Grafana"` or `"AWS Production, Billing"`). It serves two purposes:
+
+1. **SAML attribute**: all values are emitted as a multi-valued `groups` attribute in the
+   assertion for both AWS and Grafana logins. Grafana can map these values via its
+   `org_mapping` / `allowed_organizations` settings; AWS ignores unknown attributes.
+2. **Portal grouping**: the first value is used as the section header in the Unified SSO
+   Portal role panel (roles without a group fall under "Other").
+
+Do not combine the `groups` field with the legacy `attr_groups` custom attribute — when
+`groups` is present it takes precedence and `attr_groups` is ignored.
+
+**DynamoDB / Lambda payload example:**
+```json
+{
+  "username": "jane.smith",
+  "role_arn": "grafana:viewer",
+  "groups": "Grafana"
+}
+```
+
 ## Configuration Examples
 
 ### AWS Console Configuration
@@ -122,10 +145,10 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
   "acs_url": "https://mystack.grafana.net/saml/acs",
   "audience": "https://mystack.grafana.net",
   "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+  "groups": "Grafana",
   "attr_email": "jane.smith@example.com",
   "attr_display_name": "Jane Smith",
   "attr_name": "Jane Smith",
-  "attr_groups": "Editors",
   "created_at": "2024-01-08T00:00:00Z"
 }
 ```
@@ -142,6 +165,7 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
     "audience": "https://mystack.grafana.net",
     "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
+    "groups": "Grafana",
     "attr_email": "jane.smith@example.com",
     "attr_display_name": "Jane Smith",
     "attr_name": "Jane Smith",
@@ -162,7 +186,7 @@ For Grafana Cloud, you don't need AWS-specific attributes. Instead, configure us
   <saml:AttributeValue>Jane Smith</saml:AttributeValue>
 </saml:Attribute>
 <saml:Attribute Name="groups">
-  <saml:AttributeValue>Editors</saml:AttributeValue>
+  <saml:AttributeValue>Grafana</saml:AttributeValue>
 </saml:Attribute>
 ```
 

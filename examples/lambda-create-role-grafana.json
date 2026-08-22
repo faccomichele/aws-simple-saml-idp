@@ -8,9 +8,9 @@
     "audience": "https://mystack.grafana.net",
     "nameid_format": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
     "description": "Grafana Cloud monitoring access",
+    "groups": "Grafana",
     "attr_email": "jane.smith@example.com",
     "attr_display_name": "Jane Smith",
-    "attr_name": "Jane Smith",
-    "attr_groups": "Editors"
+    "attr_name": "Jane Smith"
   }
 }
